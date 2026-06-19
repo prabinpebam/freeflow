@@ -1,14 +1,13 @@
-Expose dictation prompts, vocabulary, language and UX toggles in Settings
+Add run-log viewer and Paste-again button to the app shell
 
-Several Core/pipeline capabilities existed but had no UI. The Settings page now
-edits them (all consumed by the tested ContextPromptBuilder / pipeline):
+The history store (JsonHistoryStore) and DictationPipeline.PasteAgainAsync
+already existed but had no UI. This surfaces both:
 
-- Dictation section: honor "press enter" toggle, output language override,
-  custom vocabulary, and optional dictation + command/edit prompt overrides.
-- General section: play-sounds and show-overlay toggles (previously inert
-  settings) alongside launch-at-login.
+- New RunLogPage lists persisted runs newest-first (timestamp, intent, app,
+  status, cleaned + raw text) with Refresh and Clear (confirmation dialog).
+- MainPage gains a "Run log" button and a "Paste again" button that re-pastes
+  the last cleaned transcript; it enables once a completed run exists.
 
-Load/save round-trips through AppSettings; prompt/vocabulary/language feed the
-post-processing system prompt. App builds x86 clean.
+Inner loop GREEN at 186; app builds x86 clean.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

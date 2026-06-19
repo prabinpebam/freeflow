@@ -37,6 +37,34 @@ public sealed partial class MainPage : Page
     private void OnSettingsClick(object sender, RoutedEventArgs e)
         => Frame.Navigate(typeof(SettingsPage));
 
+    private void OnRunLogClick(object sender, RoutedEventArgs e)
+        => Frame.Navigate(typeof(RunLogPage));
+
+    private async void OnPasteAgainClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            PasteAgainButton.IsEnabled = false;
+            await _pipeline.PasteAgainAsync();
+            if (_pipeline.LastRun is { } run)
+            {
+                ShowStatus(
+                    InfoBarSeverity.Success,
+                    "Pasted again",
+                    $"Re-pasted the last cleaned text into {DescribeContext(run)}.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowStatus(InfoBarSeverity.Error, "Paste failed", ex.Message);
+        }
+        finally
+        {
+            PasteAgainButton.IsEnabled = _pipeline.LastRun is { } r
+                && !string.IsNullOrEmpty(r.PostProcessedTranscript);
+        }
+    }
+
     private async void OnRunDictationClick(object sender, RoutedEventArgs e)
     {
         // Toggle: first click starts recording, second click stops & processes.
@@ -129,6 +157,7 @@ public sealed partial class MainPage : Page
     private void ReflectRun(PipelineRun run)
     {
         RunLabel.Text = "Record & dictate";
+        PasteAgainButton.IsEnabled = !string.IsNullOrEmpty(run.PostProcessedTranscript);
         ContextText.Text = DescribeContext(run);
         RawText.Text = string.IsNullOrEmpty(run.RawTranscript) ? "(empty)" : run.RawTranscript;
         CleanedText.Text = string.IsNullOrEmpty(run.PostProcessedTranscript)
