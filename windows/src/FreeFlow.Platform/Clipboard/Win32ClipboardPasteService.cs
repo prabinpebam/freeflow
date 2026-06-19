@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using FreeFlow.Core.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -23,8 +25,25 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
 
     private const int INPUT_KEYBOARD = 1;
     private const uint KEYEVENTF_KEYUP = 0x0002;
+    private const uint KEYEVENTF_SCANCODE = 0x0008;
+    private const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
     private const ushort VK_CONTROL = 0x11;
     private const ushort VK_V = 0x56;
+
+    // Modifiers that, if physically held when paste fires (e.g. the Ctrl+Alt of a
+    // toggle hotkey), would corrupt the synthesized Ctrl+V chord. We release any
+    // that are down before pasting and re-press them afterwards.
+    private static readonly ushort[] ModifierKeys =
+    {
+        0xA0, // VK_LSHIFT
+        0xA1, // VK_RSHIFT
+        0xA2, // VK_LCONTROL
+        0xA3, // VK_RCONTROL
+        0xA4, // VK_LMENU (left Alt)
+        0xA5, // VK_RMENU (right Alt)
+        0x5B, // VK_LWIN
+        0x5C, // VK_RWIN
+    };
 
     private readonly ILogger<Win32ClipboardPasteService> _logger;
     private readonly TimeSpan _restoreDelay;
@@ -34,7 +53,10 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
         TimeSpan? restoreDelay = null)
     {
         _logger = logger ?? NullLogger<Win32ClipboardPasteService>.Instance;
-        _restoreDelay = restoreDelay ?? TimeSpan.FromMilliseconds(120);
+        // The restore must not race the asynchronous Ctrl+V: SendInput only queues
+        // the keystroke, and the target app reads the clipboard a little later. If
+        // we restore the previous clipboard too soon the old text pastes instead.
+        _restoreDelay = restoreDelay ?? TimeSpan.FromMilliseconds(400);
     }
 
     public async Task PasteTextAsync(string text, CancellationToken ct = default)
@@ -166,8 +188,26 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
         return false;
     }
 
-    private static void SendCtrlV()
+    private void SendCtrlV()
     {
+        // Neutralize any modifier keys the user is still physically holding (the
+        // Ctrl/Alt of a toggle hotkey, for instance) so the foreground app sees a
+        // clean Ctrl+V rather than e.g. Ctrl+Alt+V.
+        var held = new List<ushort>();
+        foreach (var vk in ModifierKeys)
+        {
+            if ((GetAsyncKeyState(vk) & 0x8000) != 0)
+            {
+                held.Add(vk);
+            }
+        }
+
+        if (held.Count > 0)
+        {
+            var release = held.Select(vk => KeyInput(vk, down: false)).ToArray();
+            SendInput((uint)release.Length, release, Marshal.SizeOf<INPUT>());
+        }
+
         var inputs = new INPUT[]
         {
             KeyInput(VK_CONTROL, down: true),
@@ -176,20 +216,52 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
             KeyInput(VK_CONTROL, down: false),
         };
 
-        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
+        var sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
+        if (sent == 0)
+        {
+            _logger.LogWarning("SendInput for Ctrl+V reported 0 events (err={Err}).", Marshal.GetLastWin32Error());
+        }
+
+        // Restore the modifiers we released so the user's physical hold stays
+        // consistent with what the OS believes is down.
+        if (held.Count > 0)
+        {
+            var repress = held.Select(vk => KeyInput(vk, down: true)).ToArray();
+            SendInput((uint)repress.Length, repress, Marshal.SizeOf<INPUT>());
+        }
     }
 
-    private static INPUT KeyInput(ushort vk, bool down) => new()
+    private static INPUT KeyInput(ushort vk, bool down)
     {
-        type = INPUT_KEYBOARD,
-        u = new InputUnion
+        var scan = (ushort)MapVirtualKey(vk, 0);
+        var flags = KEYEVENTF_SCANCODE | (down ? 0u : KEYEVENTF_KEYUP);
+        if (IsExtendedKey(vk))
         {
-            ki = new KEYBDINPUT
+            flags |= KEYEVENTF_EXTENDEDKEY;
+        }
+
+        return new INPUT
+        {
+            type = INPUT_KEYBOARD,
+            u = new InputUnion
             {
-                wVk = vk,
-                dwFlags = down ? 0 : KEYEVENTF_KEYUP,
+                ki = new KEYBDINPUT
+                {
+                    wVk = vk,
+                    wScan = scan,
+                    dwFlags = flags,
+                },
             },
-        },
+        };
+    }
+
+    private static bool IsExtendedKey(ushort vk) => vk switch
+    {
+        0xA3 => true, // VK_RCONTROL
+        0xA5 => true, // VK_RMENU (right Alt)
+        0x5B => true, // VK_LWIN
+        0x5C => true, // VK_RWIN
+        _ => false,
     };
 
     [StructLayout(LayoutKind.Sequential)]
@@ -217,6 +289,12 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    [DllImport("user32.dll")]
+    private static extern uint MapVirtualKey(uint uCode, uint uMapType);
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -249,3 +327,4 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GlobalUnlock(IntPtr hMem);
 }
+
