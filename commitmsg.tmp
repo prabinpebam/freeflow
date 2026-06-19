@@ -1,20 +1,8 @@
-Add first-run onboarding wizard
+Bump version to 0.2.0 for the feature-parity release
 
-Replace the bare "jump to Settings" first run with a guided wizard that mirrors
-the macOS setup flow, built as a thin shell over the tested Core SetupWizard
-state machine:
-
-- Steps: Welcome, provider connection (endpoint/key/model/version), shortcut
-  overview, microphone acknowledgement, finish — Next/Finish gated by the same
-  SetupWizard.IsStepComplete rules asserted in the inner loop.
-- Persists a GeneralSettings.HasCompletedOnboarding flag; the wizard only shows
-  when unset AND no transcription credentials exist, so configured users
-  upgrading from an earlier build are not sent back through it.
-- On finish the app saves settings and restarts so the entered provider
-  credentials are wired into the pipeline; "Skip for now" records completion and
-  enters the app.
-
-Inner loop GREEN at 197; app builds x86 clean; portable smoke test launches
-without crashing.
+This build closes the macOS feature-parity gap (recording overlay, sounds,
+system tray, launch-at-login, press-enter, voice macros, run-log viewer,
+paste-again, robust clipboard paste, expanded settings, and a first-run
+onboarding wizard), so the version moves from 0.1.0 to 0.2.0.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
