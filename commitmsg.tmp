@@ -1,14 +1,17 @@
-Wire launch-at-login and recording sound cues
+Add system tray presence and hide-to-tray
 
-Two macOS features that existed only as inert settings flags are now real:
+Give FreeFlow the always-available background presence of the macOS menu-bar
+app. Win32 TrayIcon (Shell_NotifyIcon + window subclass) shows a notification
+icon with an Open / Settings / Quit context menu. Closing the main window now
+hides it to the tray (AppWindow.Closing canceled) so the global shortcuts keep
+running in the background; Quit performs the real exit and cleanup.
 
-- Launch at login: ILaunchAtLoginService seam + RegistryLaunchAtLoginService
-  (per-user HKCU Run key, no elevation). Applied on settings save and
-  reconciled on startup so an externally-removed entry self-heals.
-- Alert sounds: ISoundService seam + Win32SoundService (winmm PlaySound with
-  system aliases, async/non-blocking). SoundController plays start/stop/ready/
-  error cues from pipeline state, honoring the General > play sounds toggle.
+- TrayIcon uses a 32/64-bit-safe SetWindowLongPtr wrapper (x86 only exports
+  SetWindowLongW) and TrackPopupMenu with TPM_RETURNCMD for synchronous menu
+  handling, loading the app .ico for the tray glyph.
+- App wires tray events to show/settings/quit on the UI dispatcher.
 
-DI exposes both in the real platform composition. Inner loop stays GREEN (175).
+Verified: portable x86 launches clean (no crash log) with tray + overlay +
+sounds startup wiring.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

@@ -21,6 +21,8 @@ public sealed partial class MainWindow : Window
     private const int DefaultWidthDips = 480;
     private const int DefaultHeightDips = 760;
 
+    private bool _allowClose;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -30,6 +32,11 @@ public sealed partial class MainWindow : Window
 
         AppWindow.SetIcon("Assets/AppIcon.ico");
 
+        // Closing the window hides FreeFlow to the tray instead of exiting, so
+        // the global shortcuts keep working in the background (like the macOS
+        // menu-bar app). A real exit goes through the tray's Quit command.
+        AppWindow.Closing += OnAppWindowClosing;
+
         ResizeToDefault();
 
         // Navigate the root frame to the main page on startup.
@@ -38,6 +45,27 @@ public sealed partial class MainWindow : Window
 
     /// <summary>Navigates the root frame straight to the Settings page (first run).</summary>
     public void NavigateToSettings() => RootFrame.Navigate(typeof(SettingsPage));
+
+    /// <summary>Brings the window back from the tray and focuses it.</summary>
+    public void ShowFromTray()
+    {
+        AppWindow.Show();
+        Activate();
+    }
+
+    /// <summary>Permits the next close to actually exit (used by the tray Quit command).</summary>
+    public void AllowClose() => _allowClose = true;
+
+    private void OnAppWindowClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
+    {
+        if (_allowClose)
+        {
+            return;
+        }
+
+        args.Cancel = true;
+        AppWindow.Hide();
+    }
 
     /// <summary>
     /// Sets a fixed, DPI-aware default window size. AppWindow.Resize takes

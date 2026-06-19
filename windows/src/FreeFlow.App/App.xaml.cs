@@ -26,6 +26,7 @@ public partial class App : Application
     private IHotkeyService? _hotkeys;
     private OverlayController? _overlay;
     private SoundController? _sounds;
+    private TrayIcon? _tray;
 
     public static IServiceProvider Services { get; private set; } = null!;
 
@@ -82,8 +83,30 @@ public partial class App : Application
                 _hotkeys?.Stop();
                 _overlay?.Dispose();
                 _sounds?.Dispose();
+                _tray?.Dispose();
             };
             _window.Activate();
+
+            // System-tray presence so FreeFlow runs in the background like the
+            // macOS menu-bar app: closing the window hides to the tray, and the
+            // tray menu offers Open / Settings / Quit.
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(main);
+            _tray = new TrayIcon(hwnd);
+            _tray.OpenRequested += () => main.DispatcherQueue.TryEnqueue(main.ShowFromTray);
+            _tray.SettingsRequested += () => main.DispatcherQueue.TryEnqueue(() =>
+            {
+                main.NavigateToSettings();
+                main.ShowFromTray();
+            });
+            _tray.QuitRequested += () => main.DispatcherQueue.TryEnqueue(() =>
+            {
+                main.AllowClose();
+                _hotkeys?.Stop();
+                _overlay?.Dispose();
+                _sounds?.Dispose();
+                _tray?.Dispose();
+                Exit();
+            });
 
             // First-run experience: if no transcription credentials are configured,
             // jump straight to Settings so the app is usable immediately.
