@@ -116,6 +116,22 @@ public sealed class FakeSelectionReader : FreeFlow.Core.Context.ISelectionReader
     }
 }
 
+/// <summary>Returns a scripted foreground app (or null) for selection-policy tests.</summary>
+public sealed class FakeForegroundAppProbe : FreeFlow.Core.Context.IForegroundAppProbe
+{
+    private readonly FreeFlow.Core.Context.ForegroundAppInfo? _app;
+
+    public FakeForegroundAppProbe(FreeFlow.Core.Context.ForegroundAppInfo? app) => _app = app;
+
+    public int Probes { get; private set; }
+
+    public FreeFlow.Core.Context.ForegroundAppInfo? TryGetForegroundApp()
+    {
+        Probes++;
+        return _app;
+    }
+}
+
 /// <summary>
 /// In-memory clipboard + paste recorder that preserves/restores the clipboard
 /// around each paste (in a finally block) so the restore invariant holds even

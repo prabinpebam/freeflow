@@ -72,8 +72,14 @@ public static class RealPlatformServiceCollectionExtensions
                 sp.GetService<ILogger<HttpPostProcessingClient>>()));
 
         services.AddSingleton<IContextService, ForegroundWindowContextService>();
+        services.AddSingleton<IForegroundAppProbe>(sp =>
+            new Win32ForegroundAppProbe(sp.GetService<ILogger<Win32ForegroundAppProbe>>()));
         services.AddSingleton<ISelectionReader>(sp =>
-            new ClipboardSelectionReader(sp.GetService<ILogger<ClipboardSelectionReader>>()));
+            new PolicyAwareSelectionReader(
+                sp.GetRequiredService<IForegroundAppProbe>(),
+                new UiaSelectionReader(sp.GetService<ILogger<UiaSelectionReader>>()),
+                new ClipboardSelectionReader(sp.GetService<ILogger<ClipboardSelectionReader>>()),
+                sp.GetService<ILogger<PolicyAwareSelectionReader>>()));
         services.AddSingleton<IClipboardPasteService>(sp =>
             new Win32ClipboardPasteService(sp.GetService<ILogger<Win32ClipboardPasteService>>()));
 

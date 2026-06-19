@@ -730,6 +730,17 @@ Tasks:
 - Broader app compatibility for selected text/edit mode
 - Updater polish and reliability improvements
 
+Status (selection-extraction baseline complete):
+
+- [x] Core `ForegroundAppInfo` + `SelectionStrategy` + `IForegroundAppProbe` seam
+- [x] Core `AppCompatibilityPolicy` (per-app strategy ordering; terminals never get Ctrl+C) — L0
+- [x] Core `PolicyAwareSelectionReader` (UIA-first, policy-gated clipboard fallback) — L1
+- [x] Platform `UiaSelectionReader` (UI Automation TextPattern, side-effect-free) — L4
+- [x] Platform `Win32ForegroundAppProbe` (foreground process/title) — L4
+- [x] Real DI: selection reader = policy-aware (UIA → clipboard); known-limitations LIM-007 updated
+- Inner loop GREEN at 149 tests; Platform + App build x64 clean.
+- Follow-on: per-app allow-list surfaced in settings UX; screenshot/context maturity; updater UX polish.
+
 ## 13. Work breakdown structure (WBS)
 
 ## 13.1 Epics
