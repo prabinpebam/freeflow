@@ -2,11 +2,14 @@ using FreeFlow.Core.Abstractions;
 using FreeFlow.Core.History;
 using FreeFlow.Core.Input;
 using FreeFlow.Core.Pipeline;
+using FreeFlow.Core.Settings;
 using FreeFlow.Infrastructure.History;
+using FreeFlow.Infrastructure.Settings;
 using FreeFlow.Platform.Clipboard;
 using FreeFlow.Platform.Context;
 using FreeFlow.Platform.Input;
 using FreeFlow.Platform.Mocks;
+using FreeFlow.Platform.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -59,6 +62,19 @@ public static class PlatformServiceCollectionExtensions
             var svc = new KeyboardHookHotkeyService(sp.GetService<ILogger<KeyboardHookHotkeyService>>());
             svc.Configure(HotkeyBindings.Defaults);
             return svc;
+        });
+
+        services.AddSingleton<ISecretProtector, DpapiSecretProtector>();
+        services.AddSingleton<ISettingsStore>(sp =>
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "FreeFlow");
+            Directory.CreateDirectory(dir);
+            return new JsonSettingsStore(
+                Path.Combine(dir, "settings.json"),
+                sp.GetRequiredService<ISecretProtector>(),
+                sp.GetService<ILogger<JsonSettingsStore>>());
         });
 
         services.AddSingleton<DictationPipeline>();

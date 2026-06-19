@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using FreeFlow.Core.Settings;
 
 namespace FreeFlow.Platform.Settings;
 
@@ -9,7 +10,7 @@ namespace FreeFlow.Platform.Settings;
 /// ciphertext is Base64 so it can live in a JSON settings file. Decryption is
 /// resilient: an unreadable blob returns empty rather than throwing.
 /// </summary>
-public sealed class DpapiSecretProtector
+public sealed class DpapiSecretProtector : ISecretProtector
 {
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("FreeFlow.Windows.Settings.v1");
 
@@ -27,9 +28,9 @@ public sealed class DpapiSecretProtector
         return Convert.ToBase64String(bytes);
     }
 
-    public string Unprotect(string protectedBase64)
+    public string Unprotect(string protectedValue)
     {
-        if (string.IsNullOrEmpty(protectedBase64))
+        if (string.IsNullOrEmpty(protectedValue))
         {
             return string.Empty;
         }
@@ -37,7 +38,7 @@ public sealed class DpapiSecretProtector
         try
         {
             var bytes = ProtectedData.Unprotect(
-                Convert.FromBase64String(protectedBase64),
+                Convert.FromBase64String(protectedValue),
                 Entropy,
                 DataProtectionScope.CurrentUser);
             return Encoding.UTF8.GetString(bytes);

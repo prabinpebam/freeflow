@@ -19,21 +19,28 @@
         <StackPanel Grid.Row="0" Spacing="4">
             <TextBlock Text="FreeFlow for Windows" Style="{StaticResource TitleLargeTextBlockStyle}" />
             <TextBlock
-                Text="Phase 2 preview — pipeline wired against mock platform services."
+                Text="Phase 4 preview — pipeline + settings wired against mock platform services."
                 Style="{StaticResource BodyTextBlockStyle}"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </StackPanel>
 
-        <Button
-            Grid.Row="1"
-            x:Name="RunButton"
-            Click="OnRunDictationClick"
-            Style="{StaticResource AccentButtonStyle}">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <FontIcon Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" />
-                <TextBlock Text="Run mock dictation" />
-            </StackPanel>
-        </Button>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
+            <Button
+                x:Name="RunButton"
+                Click="OnRunDictationClick"
+                Style="{StaticResource AccentButtonStyle}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" />
+                    <TextBlock Text="Run mock dictation" />
+                </StackPanel>
+            </Button>
+            <Button x:Name="SettingsButton" Click="OnSettingsClick">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE713;" FontFamily="Segoe MDL2 Assets" />
+                    <TextBlock Text="Settings" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
 
         <InfoBar
             Grid.Row="2"

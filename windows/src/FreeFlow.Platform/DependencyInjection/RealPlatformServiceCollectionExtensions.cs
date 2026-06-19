@@ -3,12 +3,15 @@ using FreeFlow.Core.History;
 using FreeFlow.Core.Input;
 using FreeFlow.Core.Pipeline;
 using FreeFlow.Core.Providers;
+using FreeFlow.Core.Settings;
 using FreeFlow.Infrastructure.History;
 using FreeFlow.Infrastructure.Providers;
+using FreeFlow.Infrastructure.Settings;
 using FreeFlow.Platform.Audio;
 using FreeFlow.Platform.Clipboard;
 using FreeFlow.Platform.Context;
 using FreeFlow.Platform.Input;
+using FreeFlow.Platform.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -28,6 +31,12 @@ public static class RealPlatformServiceCollectionExtensions
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "FreeFlow",
         "history.json");
+
+    /// <summary>Default per-user settings file for the unpackaged app.</summary>
+    public static string DefaultSettingsPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "FreeFlow",
+        "settings.json");
 
     public static IServiceCollection AddFreeFlowRealPlatform(
         this IServiceCollection services,
@@ -78,7 +87,15 @@ public static class RealPlatformServiceCollectionExtensions
             return svc;
         });
 
+        services.AddSingleton<ISecretProtector, DpapiSecretProtector>();
+        services.AddSingleton<ISettingsStore>(sp =>
+            new JsonSettingsStore(
+                DefaultSettingsPath,
+                sp.GetRequiredService<ISecretProtector>(),
+                sp.GetService<ILogger<JsonSettingsStore>>()));
+
         services.AddSingleton<DictationPipeline>();
+        services.AddSingleton<DictationCoordinator>();
 
         return services;
     }

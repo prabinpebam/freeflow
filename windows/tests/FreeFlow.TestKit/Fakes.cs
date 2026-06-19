@@ -207,3 +207,37 @@ public sealed class FakeHotkeyService : FreeFlow.Core.Input.IHotkeyService
     /// <summary>Test hook to simulate a shortcut activation.</summary>
     public void Raise(FreeFlow.Core.Input.HotkeyTrigger trigger) => Triggered?.Invoke(trigger);
 }
+
+/// <summary>
+/// Transparent, reversible secret protector for the inner loop. Base64-encodes
+/// values behind a recognizable prefix so the plaintext never appears literally
+/// on disk (letting tests assert protection happened) without needing DPAPI,
+/// which is non-deterministic and OS-bound.
+/// </summary>
+public sealed class FakeSecretProtector : FreeFlow.Core.Settings.ISecretProtector
+{
+    private const string Prefix = "enc:";
+
+    public string Protect(string plaintext)
+        => string.IsNullOrEmpty(plaintext)
+            ? string.Empty
+            : Prefix + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(plaintext));
+
+    public string Unprotect(string protectedValue)
+    {
+        if (!protectedValue.StartsWith(Prefix, StringComparison.Ordinal))
+        {
+            return protectedValue;
+        }
+
+        try
+        {
+            return System.Text.Encoding.UTF8.GetString(
+                Convert.FromBase64String(protectedValue[Prefix.Length..]));
+        }
+        catch (FormatException)
+        {
+            return string.Empty;
+        }
+    }
+}

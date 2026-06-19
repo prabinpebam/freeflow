@@ -21,8 +21,10 @@ public sealed partial class MainPage : Page
         _pipeline = App.Services.GetRequiredService<DictationPipeline>();
     }
 
-    private async void OnRunDictationClick(object sender, RoutedEventArgs e)
-    {
+    private void OnSettingsClick(object sender, RoutedEventArgs e)
+        => Frame.Navigate(typeof(SettingsPage));
+
+    private async void OnRunDictationClick(object sender, RoutedEventArgs e)    {
         RunButton.IsEnabled = false;
         ShowStatus(InfoBarSeverity.Informational, "Running", "Capturing context and recording…");
 

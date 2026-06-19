@@ -656,6 +656,22 @@ Exit criteria:
 
 - New user can configure and complete first dictation without manual config edits
 
+> Status (Phase 4 core complete): Settings domain landed in Core — `AppSettings`
+> aggregate (`ProviderConfiguration` + `HotkeyBindings` + `DictationSettings` +
+> `GeneralSettings`), `ISecretProtector`/`ISettingsStore` seams, a pure `SettingsValidator`
+> (provider URL/model/timeout/key, history cap, shortcut conflicts) returning structured
+> `ValidationIssue`s, `HotkeyCapture` (build-from-keystate + pairwise conflict detection),
+> and a `SetupWizard` state machine (Welcome→Providers→Shortcuts→Microphone→Finish with
+> CanFinish gating). Infrastructure adds `JsonSettingsStore` (atomic write, corruption-
+> resilient, API keys encrypted via the protector) and a readable `HotkeyCombination` JSON
+> converter. Platform: `DpapiSecretProtector` now implements `ISecretProtector`; both mock
+> and real DI register `ISettingsStore`/`ISecretProtector`. The app gained a Settings page
+> that loads/edits/validates (shared Core validator) and saves to
+> `%LOCALAPPDATA%\FreeFlow\settings.json`. Tests: L0 validator/capture/wizard, L1 settings
+> store round-trip + encryption + corruption resilience. Inner loop green at 97 tests;
+> Platform + App build x64 clean. Remaining for full Phase 4: WinUI setup-wizard pages and a
+> run-log view over history (the logic seams exist; UI shells are L4 follow-ons).
+
 ## Phase 5: Context baseline and command mode (Weeks 7-8)
 
 Tasks:
