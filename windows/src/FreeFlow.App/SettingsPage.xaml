@@ -33,14 +33,22 @@
                     <TextBlock Text="Transcription provider" Style="{StaticResource SubtitleTextBlockStyle}" />
                     <TextBox x:Name="TranscriptionBaseUrl" Header="Base URL" />
                     <PasswordBox x:Name="TranscriptionApiKey" Header="API key" />
-                    <TextBox x:Name="TranscriptionModel" Header="Model" />
+                    <TextBox x:Name="TranscriptionModel" Header="Model (Azure: deployment name)" />
+                    <TextBox
+                        x:Name="TranscriptionApiVersion"
+                        Header="Azure API version"
+                        PlaceholderText="Leave blank for OpenAI/Groq; e.g. 2025-03-01-preview for Azure" />
                 </StackPanel>
 
                 <StackPanel Spacing="8">
                     <TextBlock Text="Post-processing (cleanup)" Style="{StaticResource SubtitleTextBlockStyle}" />
                     <ToggleSwitch x:Name="PostProcessingEnabled" Header="Enable cleanup" OnContent="On" OffContent="Off" />
                     <PasswordBox x:Name="PostProcessingApiKey" Header="API key" />
-                    <TextBox x:Name="PostProcessingModel" Header="Model" />
+                    <TextBox x:Name="PostProcessingModel" Header="Model (Azure: deployment name)" />
+                    <TextBox
+                        x:Name="PostProcessingApiVersion"
+                        Header="Azure API version"
+                        PlaceholderText="Leave blank for OpenAI/Groq; e.g. 2025-03-01-preview for Azure" />
                 </StackPanel>
 
                 <StackPanel Spacing="8">

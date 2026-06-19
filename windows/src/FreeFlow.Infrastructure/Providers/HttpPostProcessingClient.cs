@@ -46,7 +46,7 @@ public sealed class HttpPostProcessingClient : IPostProcessingClient
             systemPrompt,
             request.RawTranscript);
 
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, HttpTranscriptionClient.Combine(_settings.BaseUrl, "chat/completions"))
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, ProviderEndpoints.Resolve(_settings, ProviderEndpoints.ChatCompletions))
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         };

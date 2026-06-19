@@ -37,10 +37,12 @@ public sealed partial class SettingsPage : Page
         TranscriptionBaseUrl.Text = settings.Providers.Transcription.BaseUrl;
         TranscriptionApiKey.Password = settings.Providers.Transcription.ApiKey;
         TranscriptionModel.Text = settings.Providers.Transcription.Model;
+        TranscriptionApiVersion.Text = settings.Providers.Transcription.ApiVersion;
 
         PostProcessingEnabled.IsOn = settings.Dictation.PostProcessingEnabled;
         PostProcessingApiKey.Password = settings.Providers.PostProcessing.ApiKey;
         PostProcessingModel.Text = settings.Providers.PostProcessing.Model;
+        PostProcessingApiVersion.Text = settings.Providers.PostProcessing.ApiVersion;
 
         HoldToTalk.Text = settings.Hotkeys.HoldToTalk.Format();
         Toggle.Text = settings.Hotkeys.Toggle.Format();
@@ -61,11 +63,13 @@ public sealed partial class SettingsPage : Page
                     BaseUrl = TranscriptionBaseUrl.Text.Trim(),
                     ApiKey = TranscriptionApiKey.Password,
                     Model = TranscriptionModel.Text.Trim(),
+                    ApiVersion = TranscriptionApiVersion.Text.Trim(),
                 },
                 PostProcessing = current.Providers.PostProcessing with
                 {
                     ApiKey = PostProcessingApiKey.Password,
                     Model = PostProcessingModel.Text.Trim(),
+                    ApiVersion = PostProcessingApiVersion.Text.Trim(),
                 },
             },
             Dictation = current.Dictation with { PostProcessingEnabled = PostProcessingEnabled.IsOn },

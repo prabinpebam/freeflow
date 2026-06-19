@@ -68,6 +68,30 @@ public class HttpProviderClientTests
     }
 
     [Fact]
+    public async Task Transcription_azure_posts_to_deployment_url_with_api_version()
+    {
+        var handler = new StubHandler(HttpStatusCode.OK, "{\"text\":\"hello azure\"}");
+        var settings = new ProviderSettings
+        {
+            BaseUrl = "https://ai-project-deployments-resource.cognitiveservices.azure.com",
+            ApiKey = "azure-key",
+            Model = "gpt-4o-transcribe",
+            ApiVersion = "2025-03-01-preview",
+        };
+        var client = new HttpTranscriptionClient(new HttpClient(handler), settings);
+
+        var result = await client.TranscribeAsync(
+            new AudioClip(new byte[3200]),
+            new TranscriptionOptions("FreeFlow"));
+
+        result.Should().Be("hello azure");
+        handler.LastRequest!.RequestUri!.AbsoluteUri.Should().Be(
+            "https://ai-project-deployments-resource.cognitiveservices.azure.com/openai/deployments/gpt-4o-transcribe/audio/transcriptions?api-version=2025-03-01-preview");
+        handler.LastRequest.Headers.Authorization!.Scheme.Should().Be("Bearer");
+        handler.LastRequest.Headers.Authorization.Parameter.Should().Be("azure-key");
+    }
+
+    [Fact]
     public async Task Transcription_empty_clip_skips_network()
     {
         var handler = new StubHandler(HttpStatusCode.OK, "{\"text\":\"unused\"}");

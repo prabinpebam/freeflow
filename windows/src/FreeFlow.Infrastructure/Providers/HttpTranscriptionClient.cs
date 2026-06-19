@@ -56,7 +56,7 @@ public sealed class HttpTranscriptionClient : ITranscriptionClient
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
         content.Add(fileContent, "file", "audio.wav");
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, Combine(_settings.BaseUrl, "audio/transcriptions"))
+        using var request = new HttpRequestMessage(HttpMethod.Post, ProviderEndpoints.Resolve(_settings, ProviderEndpoints.Transcriptions))
         {
             Content = content,
         };
@@ -83,7 +83,4 @@ public sealed class HttpTranscriptionClient : ITranscriptionClient
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _settings.ApiKey);
         }
     }
-
-    internal static Uri Combine(string baseUrl, string path)
-        => new(new Uri(baseUrl.TrimEnd('/') + "/"), path);
 }

@@ -15,6 +15,18 @@ public sealed record ProviderSettings
     /// <summary>Model id for this endpoint.</summary>
     public string Model { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Azure OpenAI API version, e.g. <c>2025-03-01-preview</c>. When set, the
+    /// provider is treated as Azure OpenAI: requests are routed to
+    /// <c>{BaseUrl}/openai/deployments/{Model}/{operation}?api-version={ApiVersion}</c>
+    /// (with <see cref="Model"/> used as the deployment name). Leave empty for a
+    /// standard OpenAI-compatible endpoint such as Groq.
+    /// </summary>
+    public string ApiVersion { get; init; } = string.Empty;
+
+    /// <summary>True when this endpoint targets Azure OpenAI (an API version is set).</summary>
+    public bool IsAzure => !string.IsNullOrWhiteSpace(ApiVersion);
+
     /// <summary>Per-request timeout.</summary>
     public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(30);
 
