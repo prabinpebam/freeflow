@@ -117,6 +117,15 @@ public sealed class DictationPipeline
                 processed = string.Empty;
                 status = "empty";
             }
+            else if (!IsCommand(_request.Intent)
+                && Macros.VoiceMacroMatcher.Match(raw, _request.Settings.VoiceMacros) is { } macro)
+            {
+                // A voice macro matched the whole transcript: paste its payload
+                // verbatim and skip transcription cleanup entirely.
+                processed = macro.Payload;
+                status = "macro";
+                _logger.LogInformation("Voice macro triggered: {Command}", macro.Command);
+            }
             else if (_request.Settings.PostProcessingEnabled || IsCommand(_request.Intent))
             {
                 processed = await _postProcessing

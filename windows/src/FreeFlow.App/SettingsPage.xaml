@@ -83,6 +83,51 @@
                 </StackPanel>
 
                 <StackPanel Spacing="8">
+                    <TextBlock Text="Voice macros" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <TextBlock
+                        Text="Say the command phrase on its own and FreeFlow pastes the expansion verbatim, skipping cleanup."
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextWrapping="Wrap" />
+                    <ItemsControl x:Name="MacrosList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnSpacing="8" Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox
+                                        Grid.Column="0"
+                                        Text="{Binding Command, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        PlaceholderText="Spoken phrase" />
+                                    <TextBox
+                                        Grid.Column="1"
+                                        Text="{Binding Payload, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        PlaceholderText="Expansion to paste"
+                                        AcceptsReturn="True"
+                                        TextWrapping="Wrap" />
+                                    <Button
+                                        Grid.Column="2"
+                                        Click="OnRemoveMacroClick"
+                                        Tag="{Binding}"
+                                        VerticalAlignment="Top">
+                                        <FontIcon Glyph="&#xE74D;" FontFamily="Segoe MDL2 Assets" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button x:Name="AddMacroButton" Click="OnAddMacroClick" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE710;" FontFamily="Segoe MDL2 Assets" />
+                            <TextBlock Text="Add macro" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
                     <TextBlock Text="Shortcuts" Style="{StaticResource SubtitleTextBlockStyle}" />
                     <TextBox x:Name="HoldToTalk" Header="Hold-to-talk (e.g. RightCtrl)" />
                     <TextBox x:Name="Toggle" Header="Toggle (e.g. Ctrl+Alt+Space)" />

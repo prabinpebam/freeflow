@@ -1,19 +1,15 @@
-Preserve full clipboard, exclude dictation from history, guard restore
+Add voice macros: spoken phrase expands to a saved snippet
 
-Port the macOS pasteboard-fidelity behavior into Win32ClipboardPasteService,
-replacing the text-only preserve/restore that could destroy a user's copied
-image or rich content:
+Port the macOS voice-macro feature end to end:
 
-- Snapshot every memory-based clipboard format (text, RTF, HTML, DIB, file
-  lists) and restore them all, so a paste never wipes non-text clipboard data.
-- Mark the dictated text transient via the CanIncludeInClipboardHistory,
-  CanUploadToCloudClipboard and ExcludeClipboardContentFromMonitorProcessing
-  formats so it stays out of Win+V history and the cloud clipboard (analog of
-  the macOS transient/concealed type marking).
-- Verify the clipboard sequence number before restoring: if the user copied
-  something new during the paste window, skip the restore instead of clobbering
-  it (analog of the macOS changeCount check).
+- Core: VoiceMacro model + pure VoiceMacroMatcher (lowercase, strip
+  punctuation, trim; whole-transcript exact match, first match wins).
+- Pipeline: when a macro matches the raw transcript (non-command intents),
+  paste its payload verbatim and bypass transcription cleanup (status "macro").
+- Settings: VoiceMacros persist as part of DictationSettings; a new "Voice
+  macros" editor adds/edits/removes command/expansion pairs.
+- Tests: L0 matcher cases, L3 pipeline macro test, L1 settings round-trip.
 
-App builds x86 clean; Platform-only change (exercised at L4).
+Inner loop GREEN at 197 (was 186); app builds x86 clean.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

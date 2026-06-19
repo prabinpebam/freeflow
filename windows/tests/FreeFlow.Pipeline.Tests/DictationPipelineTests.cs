@@ -144,4 +144,35 @@ public class DictationPipelineTests
         clipboard.LastPasted.Should().Be("Send it, press enter.");
         keystrokes.EnterCount.Should().Be(0);
     }
+
+    [Fact]
+    public async Task Voice_macro_pastes_payload_and_bypasses_cleanup()
+    {
+        var clipboard = new InMemoryClipboardPasteService();
+        var pipeline = new DictationPipeline(
+            new FixtureAudioCapture(new AudioClip(new byte[3200])),
+            new CassetteTranscriptionClient("Insert my email."),
+            new ScriptedPostProcessingClient("THIS SHOULD NOT BE USED"),
+            new StaticContextService(new CaptureContext("Notepad", "notepad", "Untitled - Notepad", null)),
+            clipboard,
+            new SeededIdProvider(),
+            new FakeTimeProvider(DateTimeOffset.Parse("2026-06-19T00:00:00Z")));
+
+        await pipeline.StartRecordingAsync(new DictationRequest
+        {
+            Settings = new DictationSettings
+            {
+                PostProcessingEnabled = true,
+                VoiceMacros = new[]
+                {
+                    new FreeFlow.Core.Macros.VoiceMacro { Command = "insert my email", Payload = "me@example.com" },
+                },
+            },
+        });
+        var run = await pipeline.StopAndProcessAsync();
+
+        run.PostProcessedTranscript.Should().Be("me@example.com");
+        run.PostProcessingStatus.Should().Be("macro");
+        clipboard.LastPasted.Should().Be("me@example.com");
+    }
 }

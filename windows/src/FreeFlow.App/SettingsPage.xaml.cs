@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FreeFlow.Core.Abstractions;
 using FreeFlow.Core.Audio;
 using FreeFlow.Core.Input;
+using FreeFlow.Core.Macros;
 using FreeFlow.Core.Providers;
 using FreeFlow.Core.Settings;
 using FreeFlow.Infrastructure.Providers;
@@ -26,11 +29,13 @@ namespace FreeFlow_App;
 public sealed partial class SettingsPage : Page
 {
     private readonly ISettingsStore _store;
+    private readonly ObservableCollection<MacroRow> _macros = new();
 
     public SettingsPage()
     {
         InitializeComponent();
         _store = App.Services.GetRequiredService<ISettingsStore>();
+        MacrosList.ItemsSource = _macros;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -87,6 +92,12 @@ public sealed partial class SettingsPage : Page
         SystemPrompt.Text = settings.Dictation.SystemPrompt;
         ContextSystemPrompt.Text = settings.Dictation.ContextSystemPrompt;
 
+        _macros.Clear();
+        foreach (var macro in settings.Dictation.VoiceMacros)
+        {
+            _macros.Add(new MacroRow { Command = macro.Command, Payload = macro.Payload });
+        }
+
         HoldToTalk.Text = settings.Hotkeys.HoldToTalk.Format();
         Toggle.Text = settings.Hotkeys.Toggle.Format();
         PasteAgain.Text = settings.Hotkeys.PasteAgain.Format();
@@ -126,6 +137,10 @@ public sealed partial class SettingsPage : Page
                 CustomVocabulary = CustomVocabulary.Text.Trim(),
                 SystemPrompt = SystemPrompt.Text.Trim(),
                 ContextSystemPrompt = ContextSystemPrompt.Text.Trim(),
+                VoiceMacros = _macros
+                    .Where(m => !string.IsNullOrWhiteSpace(m.Command) && !string.IsNullOrWhiteSpace(m.Payload))
+                    .Select(m => new VoiceMacro { Command = m.Command.Trim(), Payload = m.Payload })
+                    .ToArray(),
             },
             Hotkeys = new HotkeyBindings(
                 ParseOrUnset(HoldToTalk.Text),
@@ -269,6 +284,17 @@ public sealed partial class SettingsPage : Page
         }
     }
 
+    private void OnAddMacroClick(object sender, RoutedEventArgs e)
+        => _macros.Add(new MacroRow());
+
+    private void OnRemoveMacroClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: MacroRow row })
+        {
+            _macros.Remove(row);
+        }
+    }
+
     private void ShowValidation(InfoBarSeverity severity, string title, ValidationResult result)
     {
         var message = result.Issues.Count == 0
@@ -283,5 +309,40 @@ public sealed partial class SettingsPage : Page
         ValidationBar.Title = title;
         ValidationBar.Message = message;
         ValidationBar.IsOpen = true;
+    }
+
+    /// <summary>Two-way bindable row backing the voice-macros editor.</summary>
+    private sealed class MacroRow : INotifyPropertyChanged
+    {
+        private string _command = string.Empty;
+        private string _payload = string.Empty;
+
+        public string Command
+        {
+            get => _command;
+            set
+            {
+                if (_command != value)
+                {
+                    _command = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Command)));
+                }
+            }
+        }
+
+        public string Payload
+        {
+            get => _payload;
+            set
+            {
+                if (_payload != value)
+                {
+                    _payload = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Payload)));
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
     }
 }

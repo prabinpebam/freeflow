@@ -91,4 +91,28 @@ public class JsonSettingsStoreTests : IDisposable
         store.Load().General.HistoryCap.Should().Be(7);
         Directory.GetFiles(_dir).Should().ContainSingle();
     }
+
+    [Fact]
+    public void Voice_macros_round_trip()
+    {
+        var store = Store();
+        store.Save(Sample() with
+        {
+            Dictation = AppSettings.Defaults.Dictation with
+            {
+                VoiceMacros = new[]
+                {
+                    new FreeFlow.Core.Macros.VoiceMacro { Command = "insert my email", Payload = "me@example.com" },
+                    new FreeFlow.Core.Macros.VoiceMacro { Command = "sign off", Payload = "Best,\nPat" },
+                },
+            },
+        });
+
+        var loaded = store.Load();
+
+        loaded.Dictation.VoiceMacros.Should().HaveCount(2);
+        loaded.Dictation.VoiceMacros[0].Command.Should().Be("insert my email");
+        loaded.Dictation.VoiceMacros[0].Payload.Should().Be("me@example.com");
+        loaded.Dictation.VoiceMacros[1].Payload.Should().Be("Best,\nPat");
+    }
 }

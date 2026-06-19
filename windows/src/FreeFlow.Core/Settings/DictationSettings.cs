@@ -19,4 +19,11 @@ public sealed record DictationSettings
 
     /// <summary>Optional target language for translation output (parity: output language).</summary>
     public string? OutputLanguage { get; init; }
+
+    /// <summary>
+    /// User-defined voice macros. When the raw transcript matches a macro command
+    /// (loose comparison), the macro payload is pasted verbatim and transcription
+    /// cleanup is bypassed (parity with the macOS voice macros).
+    /// </summary>
+    public IReadOnlyList<Macros.VoiceMacro> VoiceMacros { get; init; } = System.Array.Empty<Macros.VoiceMacro>();
 }
