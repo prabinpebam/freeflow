@@ -25,6 +25,7 @@ public partial class App : Application
     private DictationCoordinator? _coordinator;
     private IHotkeyService? _hotkeys;
     private OverlayController? _overlay;
+    private SoundController? _sounds;
 
     public static IServiceProvider Services { get; private set; } = null!;
 
@@ -58,10 +59,29 @@ public partial class App : Application
                 main.DispatcherQueue,
                 () => settingsStore.Load().General.ShowOverlay);
 
+            // Recording lifecycle audio cues, honoring the General > sounds toggle.
+            _sounds = new SoundController(
+                Services.GetRequiredService<DictationPipeline>(),
+                Services.GetRequiredService<ISoundService>(),
+                () => settingsStore.Load().General.PlaySounds);
+
+            // Reconcile the OS startup registration with the saved preference so an
+            // externally-removed entry (or a first run) self-heals on launch.
+            try
+            {
+                Services.GetRequiredService<ILaunchAtLoginService>()
+                    .SetEnabled(settingsStore.Load().General.LaunchAtLogin);
+            }
+            catch
+            {
+                // Startup registration is best-effort and must never block launch.
+            }
+
             _window.Closed += (_, _) =>
             {
                 _hotkeys?.Stop();
                 _overlay?.Dispose();
+                _sounds?.Dispose();
             };
             _window.Activate();
 

@@ -1,16 +1,14 @@
-Add recording overlay with live audio metering
+Wire launch-at-login and recording sound cues
 
-Port the macOS recording overlay to Windows so dictation has visible
-feedback (a key gap behind the macOS app feeling complete).
+Two macOS features that existed only as inert settings flags are now real:
 
-- Core: AudioLevelNormalizer (port of LiveAudioLevelNormalizer.swift) with
-  adaptive noise floor / peak ceiling and a noise gate, plus PCM16 RMS helper.
-  Pure and deterministic; covered by 7 L0 tests (inner loop 168 -> 175).
-- Platform: NAudioCaptureService implements new IAudioLevelMonitor seam and
-  publishes a smoothed 0..1 level per capture buffer; DI exposes the same
-  instance as IAudioCaptureService + IAudioLevelMonitor.
-- App: borderless, always-on-top OverlayWindow shown WITHOUT activation so it
-  never steals foreground from the target app; OverlayController binds pipeline
-  state + mic level to it and honors the General > overlay toggle.
+- Launch at login: ILaunchAtLoginService seam + RegistryLaunchAtLoginService
+  (per-user HKCU Run key, no elevation). Applied on settings save and
+  reconciled on startup so an externally-removed entry self-heals.
+- Alert sounds: ISoundService seam + Win32SoundService (winmm PlaySound with
+  system aliases, async/non-blocking). SoundController plays start/stop/ready/
+  error cues from pipeline state, honoring the General > play sounds toggle.
+
+DI exposes both in the real platform composition. Inner loop stays GREEN (175).
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

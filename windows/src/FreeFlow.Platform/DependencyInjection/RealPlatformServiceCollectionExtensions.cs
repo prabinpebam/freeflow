@@ -13,6 +13,7 @@ using FreeFlow.Platform.Clipboard;
 using FreeFlow.Platform.Context;
 using FreeFlow.Platform.Input;
 using FreeFlow.Platform.Settings;
+using FreeFlow.Platform.SystemIntegration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -104,6 +105,9 @@ public static class RealPlatformServiceCollectionExtensions
         });
 
         services.AddSingleton<ISecretProtector, DpapiSecretProtector>();
+        services.AddSingleton<ILaunchAtLoginService>(sp =>
+            new RegistryLaunchAtLoginService(sp.GetService<ILogger<RegistryLaunchAtLoginService>>()));
+        services.AddSingleton<ISoundService, Win32SoundService>();
         services.AddSingleton<ISettingsStore>(sp =>
             new JsonSettingsStore(
                 DefaultSettingsPath,

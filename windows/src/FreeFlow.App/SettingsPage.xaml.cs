@@ -228,6 +228,18 @@ public sealed partial class SettingsPage : Page
         }
 
         _store.Save(settings);
+
+        // Apply the OS-level startup registration to match the saved preference.
+        try
+        {
+            App.Services.GetRequiredService<ILaunchAtLoginService>()
+                .SetEnabled(settings.General.LaunchAtLogin);
+        }
+        catch
+        {
+            // Startup registration is best-effort; saving settings still succeeds.
+        }
+
         ShowValidation(InfoBarSeverity.Success, "Settings saved.", SettingsValidator.Validate(settings));
     }
 
