@@ -109,6 +109,12 @@ defaults delete com.zachlatta.freeflow context_request_timeout_seconds
 
 </details>
 
+## Windows Port Plan
+
+If you want to build a Windows-native version of FreeFlow, see the detailed implementation and release roadmap in:
+
+- [`docs/windows/porting-plan.md`](docs/windows/porting-plan.md)
+
 ## License
 
 Licensed under the MIT license.
