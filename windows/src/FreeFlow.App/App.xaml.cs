@@ -108,12 +108,15 @@ public partial class App : Application
                 Exit();
             });
 
-            // First-run experience: if no transcription credentials are configured,
-            // jump straight to Settings so the app is usable immediately.
+            // First-run experience: show onboarding only when setup is genuinely
+            // incomplete — the flag is unset AND no transcription credentials exist
+            // (so already-configured users upgrading from an earlier build are not
+            // forced back through the wizard).
             var settings = settingsStore.Load();
-            if (!settings.Providers.Transcription.HasCredentials)
+            if (!settings.General.HasCompletedOnboarding
+                && !settings.Providers.Transcription.HasCredentials)
             {
-                main.NavigateToSettings();
+                main.NavigateToOnboarding();
             }
         }
         catch (Exception ex)

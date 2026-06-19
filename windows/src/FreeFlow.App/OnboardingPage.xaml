@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="FreeFlow_App.OnboardingPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:FreeFlow_App"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Padding="32" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Spacing="4">
+            <TextBlock x:Name="StepTitle" Text="Welcome to FreeFlow" Style="{StaticResource TitleLargeTextBlockStyle}" />
+            <TextBlock x:Name="StepProgress" Text="Step 1 of 5" Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1">
+            <Grid>
+                <!-- Welcome -->
+                <StackPanel x:Name="WelcomePanel" Spacing="12">
+                    <TextBlock TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"
+                               Text="FreeFlow turns your voice into clean text anywhere you can type. Hold your shortcut, speak, and FreeFlow transcribes, cleans up, and pastes the result into the focused app." />
+                    <TextBlock TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"
+                               Text="This quick setup configures your transcription provider, confirms your shortcuts, and checks microphone access." />
+                </StackPanel>
+
+                <!-- Providers -->
+                <StackPanel x:Name="ProvidersPanel" Spacing="8" Visibility="Collapsed">
+                    <TextBlock TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"
+                               Text="Enter your transcription provider details (OpenAI, Azure OpenAI, Groq, or any compatible endpoint). You can refine these and add a cleanup model later in Settings." />
+                    <TextBox x:Name="TranscriptionBaseUrl" Header="Transcription endpoint URL"
+                             PlaceholderText="https://api.openai.com/v1/audio/transcriptions" />
+                    <PasswordBox x:Name="TranscriptionApiKey" Header="API key" />
+                    <TextBox x:Name="TranscriptionModel" Header="Model" PlaceholderText="gpt-4o-transcribe / whisper-1" />
+                    <TextBox x:Name="TranscriptionApiVersion" Header="API version (Azure only, optional)"
+                             PlaceholderText="2025-03-01-preview" />
+                </StackPanel>
+
+                <!-- Shortcuts -->
+                <StackPanel x:Name="ShortcutsPanel" Spacing="8" Visibility="Collapsed">
+                    <TextBlock TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"
+                               Text="FreeFlow uses these global shortcuts by default. You can change them in Settings at any time." />
+                    <TextBlock x:Name="ShortcutHold" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock x:Name="ShortcutToggle" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock x:Name="ShortcutPasteAgain" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                </StackPanel>
+
+                <!-- Microphone -->
+                <StackPanel x:Name="MicrophonePanel" Spacing="12" Visibility="Collapsed">
+                    <TextBlock TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"
+                               Text="FreeFlow needs microphone access to record your voice. Windows may prompt for permission the first time you record. Make sure your preferred microphone is connected." />
+                    <CheckBox x:Name="MicAcknowledged" Content="I understand FreeFlow will use my microphone"
+                              Checked="OnMicAckChanged" Unchecked="OnMicAckChanged" />
+                </StackPanel>
+
+                <!-- Finish -->
+                <StackPanel x:Name="FinishPanel" Spacing="12" Visibility="Collapsed">
+                    <TextBlock TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"
+                               Text="You're all set. FreeFlow will restart to apply your provider settings, then run in the system tray. Hold your shortcut and start speaking." />
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+
+        <InfoBar Grid.Row="2" x:Name="StepInfo" IsOpen="False" IsClosable="False" />
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+            <Button x:Name="SkipButton" Content="Skip for now" Click="OnSkipClick" />
+            <Button x:Name="BackButton" Content="Back" Click="OnBackClick" IsEnabled="False" />
+            <Button x:Name="NextButton" Content="Next" Click="OnNextClick" Style="{StaticResource AccentButtonStyle}" />
+        </StackPanel>
+    </Grid>
+</Page>

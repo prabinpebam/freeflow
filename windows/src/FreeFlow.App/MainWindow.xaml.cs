@@ -46,6 +46,9 @@ public sealed partial class MainWindow : Window
     /// <summary>Navigates the root frame straight to the Settings page (first run).</summary>
     public void NavigateToSettings() => RootFrame.Navigate(typeof(SettingsPage));
 
+    /// <summary>Navigates the root frame to the first-run onboarding wizard.</summary>
+    public void NavigateToOnboarding() => RootFrame.Navigate(typeof(OnboardingPage));
+
     /// <summary>Brings the window back from the tray and focuses it.</summary>
     public void ShowFromTray()
     {

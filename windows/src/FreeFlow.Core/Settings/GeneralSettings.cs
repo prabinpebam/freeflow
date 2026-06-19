@@ -26,4 +26,11 @@ public sealed record GeneralSettings
 
     /// <summary>Maximum number of dictation runs kept in history.</summary>
     public int HistoryCap { get; init; } = 200;
+
+    /// <summary>
+    /// Whether the first-run setup wizard has been completed. When false, the app
+    /// shows onboarding on launch so the user can enter a provider key, confirm
+    /// shortcuts, and acknowledge microphone access before dictating.
+    /// </summary>
+    public bool HasCompletedOnboarding { get; init; }
 }

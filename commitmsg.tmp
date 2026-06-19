@@ -1,15 +1,20 @@
-Add voice macros: spoken phrase expands to a saved snippet
+Add first-run onboarding wizard
 
-Port the macOS voice-macro feature end to end:
+Replace the bare "jump to Settings" first run with a guided wizard that mirrors
+the macOS setup flow, built as a thin shell over the tested Core SetupWizard
+state machine:
 
-- Core: VoiceMacro model + pure VoiceMacroMatcher (lowercase, strip
-  punctuation, trim; whole-transcript exact match, first match wins).
-- Pipeline: when a macro matches the raw transcript (non-command intents),
-  paste its payload verbatim and bypass transcription cleanup (status "macro").
-- Settings: VoiceMacros persist as part of DictationSettings; a new "Voice
-  macros" editor adds/edits/removes command/expansion pairs.
-- Tests: L0 matcher cases, L3 pipeline macro test, L1 settings round-trip.
+- Steps: Welcome, provider connection (endpoint/key/model/version), shortcut
+  overview, microphone acknowledgement, finish — Next/Finish gated by the same
+  SetupWizard.IsStepComplete rules asserted in the inner loop.
+- Persists a GeneralSettings.HasCompletedOnboarding flag; the wizard only shows
+  when unset AND no transcription credentials exist, so configured users
+  upgrading from an earlier build are not sent back through it.
+- On finish the app saves settings and restarts so the entered provider
+  credentials are wired into the pipeline; "Skip for now" records completion and
+  enters the app.
 
-Inner loop GREEN at 197 (was 186); app builds x86 clean.
+Inner loop GREEN at 197; app builds x86 clean; portable smoke test launches
+without crashing.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
