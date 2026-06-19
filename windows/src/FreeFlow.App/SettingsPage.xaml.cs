@@ -81,11 +81,19 @@ public sealed partial class SettingsPage : Page
         PostProcessingModel.Text = settings.Providers.PostProcessing.Model;
         PostProcessingApiVersion.Text = settings.Providers.PostProcessing.ApiVersion;
 
+        PressEnterEnabled.IsOn = settings.Dictation.PressEnterEnabled;
+        OutputLanguage.Text = settings.Dictation.OutputLanguage ?? string.Empty;
+        CustomVocabulary.Text = settings.Dictation.CustomVocabulary;
+        SystemPrompt.Text = settings.Dictation.SystemPrompt;
+        ContextSystemPrompt.Text = settings.Dictation.ContextSystemPrompt;
+
         HoldToTalk.Text = settings.Hotkeys.HoldToTalk.Format();
         Toggle.Text = settings.Hotkeys.Toggle.Format();
         PasteAgain.Text = settings.Hotkeys.PasteAgain.Format();
 
         LaunchAtLogin.IsOn = settings.General.LaunchAtLogin;
+        PlaySounds.IsOn = settings.General.PlaySounds;
+        ShowOverlay.IsOn = settings.General.ShowOverlay;
         HistoryCap.Value = settings.General.HistoryCap;
     }
 
@@ -110,7 +118,15 @@ public sealed partial class SettingsPage : Page
                     ApiVersion = PostProcessingApiVersion.Text.Trim(),
                 },
             },
-            Dictation = current.Dictation with { PostProcessingEnabled = PostProcessingEnabled.IsOn },
+            Dictation = current.Dictation with
+            {
+                PostProcessingEnabled = PostProcessingEnabled.IsOn,
+                PressEnterEnabled = PressEnterEnabled.IsOn,
+                OutputLanguage = string.IsNullOrWhiteSpace(OutputLanguage.Text) ? null : OutputLanguage.Text.Trim(),
+                CustomVocabulary = CustomVocabulary.Text.Trim(),
+                SystemPrompt = SystemPrompt.Text.Trim(),
+                ContextSystemPrompt = ContextSystemPrompt.Text.Trim(),
+            },
             Hotkeys = new HotkeyBindings(
                 ParseOrUnset(HoldToTalk.Text),
                 ParseOrUnset(Toggle.Text),
@@ -118,6 +134,8 @@ public sealed partial class SettingsPage : Page
             General = current.General with
             {
                 LaunchAtLogin = LaunchAtLogin.IsOn,
+                PlaySounds = PlaySounds.IsOn,
+                ShowOverlay = ShowOverlay.IsOn,
                 InputDeviceId = (MicDevice.SelectedValue as string) ?? string.Empty,
                 HistoryCap = double.IsNaN(HistoryCap.Value) ? current.General.HistoryCap : (int)HistoryCap.Value,
             },

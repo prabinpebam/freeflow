@@ -53,6 +53,36 @@
                 </StackPanel>
 
                 <StackPanel Spacing="8">
+                    <TextBlock Text="Dictation" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <ToggleSwitch x:Name="PressEnterEnabled" Header="Honor spoken &quot;press enter&quot;" OnContent="On" OffContent="Off" />
+                    <TextBox
+                        x:Name="OutputLanguage"
+                        Header="Output language (optional)"
+                        PlaceholderText="Leave blank to keep the spoken language; e.g. Spanish" />
+                    <TextBox
+                        x:Name="CustomVocabulary"
+                        Header="Custom vocabulary"
+                        PlaceholderText="Domain terms / names, comma or newline separated"
+                        AcceptsReturn="True"
+                        TextWrapping="Wrap"
+                        Height="72" />
+                    <TextBox
+                        x:Name="SystemPrompt"
+                        Header="Dictation cleanup prompt (optional override)"
+                        PlaceholderText="Leave blank to use the built-in cleanup prompt"
+                        AcceptsReturn="True"
+                        TextWrapping="Wrap"
+                        Height="96" />
+                    <TextBox
+                        x:Name="ContextSystemPrompt"
+                        Header="Command / edit prompt (optional override)"
+                        PlaceholderText="Leave blank to use the built-in edit-mode prompt"
+                        AcceptsReturn="True"
+                        TextWrapping="Wrap"
+                        Height="96" />
+                </StackPanel>
+
+                <StackPanel Spacing="8">
                     <TextBlock Text="Shortcuts" Style="{StaticResource SubtitleTextBlockStyle}" />
                     <TextBox x:Name="HoldToTalk" Header="Hold-to-talk (e.g. RightCtrl)" />
                     <TextBox x:Name="Toggle" Header="Toggle (e.g. Ctrl+Alt+Space)" />
@@ -68,6 +98,8 @@
                         DisplayMemberPath="Name"
                         SelectedValuePath="Id" />
                     <ToggleSwitch x:Name="LaunchAtLogin" Header="Launch at login" OnContent="On" OffContent="Off" />
+                    <ToggleSwitch x:Name="PlaySounds" Header="Play recording sounds" OnContent="On" OffContent="Off" />
+                    <ToggleSwitch x:Name="ShowOverlay" Header="Show recording overlay" OnContent="On" OffContent="Off" />
                     <NumberBox x:Name="HistoryCap" Header="History entries kept" Minimum="1" Maximum="10000" SpinButtonPlacementMode="Inline" />
                 </StackPanel>
 
