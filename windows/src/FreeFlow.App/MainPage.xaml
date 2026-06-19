@@ -19,7 +19,7 @@
         <StackPanel Grid.Row="0" Spacing="4">
             <TextBlock Text="FreeFlow for Windows" Style="{StaticResource TitleLargeTextBlockStyle}" />
             <TextBlock
-                Text="Phase 4 preview — pipeline + settings wired against mock platform services."
+                Text="Hold your hold-to-talk shortcut to dictate, or run a manual test below. Configure your provider and shortcuts in Settings."
                 Style="{StaticResource BodyTextBlockStyle}"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </StackPanel>
@@ -31,7 +31,7 @@
                 Style="{StaticResource AccentButtonStyle}">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <FontIcon Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" />
-                    <TextBlock Text="Run mock dictation" />
+                    <TextBlock x:Name="RunLabel" Text="Record &amp; dictate" />
                 </StackPanel>
             </Button>
             <Button x:Name="SettingsButton" Click="OnSettingsClick">

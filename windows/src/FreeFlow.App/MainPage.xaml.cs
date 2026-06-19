@@ -25,16 +25,31 @@ public sealed partial class MainPage : Page
         => Frame.Navigate(typeof(SettingsPage));
 
     private async void OnRunDictationClick(object sender, RoutedEventArgs e)    {
+        // Toggle: first click starts recording, second click stops & processes.
+        if (_pipeline.State != DictationState.Recording)
+        {
+            try
+            {
+                await _pipeline.StartRecordingAsync(new DictationRequest
+                {
+                    Settings = new DictationSettings { PostProcessingEnabled = true },
+                });
+                RunLabel.Text = "Stop & paste";
+                ShowStatus(InfoBarSeverity.Informational, "Recording…", "Speak now, then click Stop & paste.");
+            }
+            catch (Exception ex)
+            {
+                ShowStatus(InfoBarSeverity.Error, "Could not start recording", ex.Message);
+            }
+
+            return;
+        }
+
         RunButton.IsEnabled = false;
-        ShowStatus(InfoBarSeverity.Informational, "Running", "Capturing context and recording…");
+        ShowStatus(InfoBarSeverity.Informational, "Processing", "Transcribing and cleaning up…");
 
         try
         {
-            await _pipeline.StartRecordingAsync(new DictationRequest
-            {
-                Settings = new DictationSettings { PostProcessingEnabled = true },
-            });
-
             var run = await _pipeline.StopAndProcessAsync();
 
             ContextText.Text = DescribeContext(run);
@@ -45,7 +60,7 @@ public sealed partial class MainPage : Page
 
             if (run.Pasted)
             {
-                ShowStatus(InfoBarSeverity.Success, "Done", $"Pasted via mock service (status: {run.PostProcessingStatus}).");
+                ShowStatus(InfoBarSeverity.Success, "Done", $"Pasted cleaned text (status: {run.PostProcessingStatus}).");
             }
             else
             {
@@ -58,6 +73,7 @@ public sealed partial class MainPage : Page
         }
         finally
         {
+            RunLabel.Text = "Record & dictate";
             RunButton.IsEnabled = true;
         }
     }

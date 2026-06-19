@@ -1,16 +1,21 @@
 using FreeFlow.Core.Input;
 using FreeFlow.Core.Pipeline;
+using FreeFlow.Core.Settings;
+using FreeFlow.Infrastructure.Settings;
 using FreeFlow.Platform.DependencyInjection;
+using FreeFlow.Platform.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 
 namespace FreeFlow_App;
 
 /// <summary>
-/// Application composition root. Builds the dependency-injection container
-/// (Core pipeline wired against Phase-2 platform services) and launches the
-/// main window. Real platform adapters replace the mock registrations in later
-/// phases without changing this file.
+/// Application composition root. Loads persisted <see cref="AppSettings"/>, wires
+/// the dictation pipeline against the <b>real</b> Windows platform adapters
+/// (NAudio capture, OpenAI-compatible HTTP providers, Win32 clipboard paste, a
+/// low-level global keyboard hook, UI-Automation selection), starts the global
+/// shortcuts, and shows the main window. On first run (no transcription API key)
+/// it opens straight to Settings so the user can paste their key.
 /// </summary>
 public partial class App : Application
 {
@@ -20,38 +25,52 @@ public partial class App : Application
 
     public static IServiceProvider Services { get; private set; } = null!;
 
-    /// <summary>
-    /// Initializes the singleton application object.  This is the first line of authored code
-    /// executed, and as such is the logical equivalent of main() or WinMain().
-    /// </summary>
     public App()
     {
         InitializeComponent();
         Services = BuildServices();
     }
 
-    /// <summary>
-    /// Invoked when the application is launched.
-    /// </summary>
-    /// <param name="args">Details about the launch request and process.</param>
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
         // Start the global keyboard hook on the UI thread (it owns the message
         // loop the WH_KEYBOARD_LL hook requires) and keep the coordinator alive
-        // so the configured shortcuts drive the pipeline end-to-end.
+        // so the configured shortcuts drive the real pipeline end-to-end.
         _coordinator = Services.GetRequiredService<DictationCoordinator>();
         _hotkeys = Services.GetRequiredService<IHotkeyService>();
         _hotkeys.Start();
 
-        _window = new MainWindow();
+        var main = new MainWindow();
+        _window = main;
         _window.Closed += (_, _) => _hotkeys?.Stop();
         _window.Activate();
+
+        // First-run experience: if no transcription credentials are configured,
+        // jump straight to Settings so the app is usable immediately.
+        var settings = Services.GetRequiredService<ISettingsStore>().Load();
+        if (!settings.Providers.Transcription.HasCredentials)
+        {
+            main.NavigateToSettings();
+        }
     }
 
     private static IServiceProvider BuildServices()
     {
+        // Read persisted settings up-front (outside the container) so the real
+        // adapters can be built from the user's providers, shortcuts, and
+        // dictation preferences. A missing/corrupt file loads as defaults.
+        var protector = new DpapiSecretProtector();
+        var store = new JsonSettingsStore(
+            RealPlatformServiceCollectionExtensions.DefaultSettingsPath,
+            protector);
+        var settings = store.Load();
+
         var services = new ServiceCollection();
-        services.AddFreeFlowMockPlatform();
+        services.AddFreeFlowRealPlatform(
+            providers: settings.Providers,
+            bindings: settings.Hotkeys,
+            historyPath: null,
+            dictation: settings.Dictation);
         return services.BuildServiceProvider();
     }
 }

@@ -43,7 +43,8 @@ public static class RealPlatformServiceCollectionExtensions
         this IServiceCollection services,
         ProviderConfiguration? providers = null,
         HotkeyBindings? bindings = null,
-        string? historyPath = null)
+        string? historyPath = null,
+        DictationSettings? dictation = null)
     {
         if (!services.Any(d => d.ServiceType == typeof(ILoggerFactory)))
         {
@@ -52,6 +53,7 @@ public static class RealPlatformServiceCollectionExtensions
 
         var configuration = providers ?? new ProviderConfiguration();
         var hotkeys = bindings ?? HotkeyBindings.Defaults;
+        var dictationSettings = dictation ?? new DictationSettings();
 
         services.AddSingleton<TimeProvider>(TimeProvider.System);
         services.AddSingleton<IIdProvider, SystemIdProvider>();
@@ -104,6 +106,10 @@ public static class RealPlatformServiceCollectionExtensions
                 sp.GetService<ILogger<JsonSettingsStore>>()));
 
         services.AddSingleton<DictationPipeline>();
+        // The coordinator builds each run's request from the user's dictation
+        // settings (custom vocabulary, system prompt, post-processing toggle).
+        services.AddSingleton<Func<DictationRequest>>(
+            _ => () => new DictationRequest { Settings = dictationSettings });
         services.AddSingleton<DictationCoordinator>();
 
         return services;
