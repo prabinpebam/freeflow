@@ -40,7 +40,7 @@ public sealed class HttpPostProcessingClient : IPostProcessingClient
             return string.Empty;
         }
 
-        var systemPrompt = BuildSystemPrompt(request);
+        var systemPrompt = ContextPromptBuilder.BuildSystemPrompt(request);
         var body = OpenAiCompatibleRequestFactory.BuildChatCompletionsBody(
             _settings.Model,
             systemPrompt,
@@ -70,48 +70,5 @@ public sealed class HttpPostProcessingClient : IPostProcessingClient
 
         // Cleanup contract: never blank out a non-empty transcript.
         return string.IsNullOrWhiteSpace(cleaned) ? request.RawTranscript : cleaned;
-    }
-
-    private static string BuildSystemPrompt(PostProcessingRequest request)
-    {
-        var sb = new StringBuilder();
-        sb.Append(string.IsNullOrWhiteSpace(request.Settings.SystemPrompt)
-            ? "You clean up dictated text. Remove filler words and fix punctuation and capitalization. "
-              + "Preserve the speaker's meaning and wording. Never invent names or facts. "
-              + "Return only the cleaned text with no preamble."
-            : request.Settings.SystemPrompt);
-
-        if (!string.IsNullOrWhiteSpace(request.Settings.CustomVocabulary))
-        {
-            sb.Append("\nPreserve these terms exactly: ").Append(request.Settings.CustomVocabulary).Append('.');
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.Settings.OutputLanguage))
-        {
-            sb.Append("\nTranslate the output into ").Append(request.Settings.OutputLanguage).Append('.');
-        }
-
-        AppendContext(sb, request.Context);
-        return sb.ToString();
-    }
-
-    private static void AppendContext(StringBuilder sb, CaptureContext context)
-    {
-        if (context is null || context == CaptureContext.None)
-        {
-            return;
-        }
-
-        var app = context.AppName ?? context.ProcessName;
-        if (!string.IsNullOrWhiteSpace(app))
-        {
-            sb.Append("\nThe user is dictating into ").Append(app);
-            if (!string.IsNullOrWhiteSpace(context.WindowTitle))
-            {
-                sb.Append(" (").Append(context.WindowTitle).Append(')');
-            }
-
-            sb.Append('.');
-        }
     }
 }

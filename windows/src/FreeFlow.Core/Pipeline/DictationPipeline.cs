@@ -18,6 +18,7 @@ public sealed class DictationPipeline
     private readonly IPostProcessingClient _postProcessing;
     private readonly IContextService _context;
     private readonly IClipboardPasteService _paste;
+    private readonly ISelectionReader? _selection;
     private readonly IIdProvider _ids;
     private readonly TimeProvider _time;
     private readonly ILogger<DictationPipeline> _logger;
@@ -36,7 +37,8 @@ public sealed class DictationPipeline
         IIdProvider ids,
         TimeProvider? time = null,
         ILogger<DictationPipeline>? logger = null,
-        IHistoryStore? history = null)
+        IHistoryStore? history = null,
+        ISelectionReader? selection = null)
     {
         _audio = audio;
         _transcription = transcription;
@@ -47,6 +49,7 @@ public sealed class DictationPipeline
         _time = time ?? TimeProvider.System;
         _logger = logger ?? NullLogger<DictationPipeline>.Instance;
         _history = history;
+        _selection = selection;
         _machine.Transitioned += (from, to) =>
             _logger.LogDebug("Dictation state {From} -> {To}", from, to);
     }
@@ -68,10 +71,23 @@ public sealed class DictationPipeline
         _logger.LogInformation("Starting dictation (intent={Intent}).", _request.Intent);
         _machine.TransitionTo(DictationState.Arming);
         _capturedContext = await _context.CaptureAsync(ct).ConfigureAwait(false);
+
+        // Command/edit mode operates on the current selection; capture it now (the
+        // foreground app may lose focus or selection once recording starts).
+        if (IsCommand(_request.Intent) && _selection is not null && !_capturedContext.HasSelection)
+        {
+            var selected = await _selection.TryReadSelectionAsync(ct).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(selected))
+            {
+                _capturedContext = _capturedContext with { SelectedText = selected };
+            }
+        }
+
         _logger.LogDebug(
-            "Captured context app={App} process={Process}.",
+            "Captured context app={App} process={Process} hasSelection={HasSelection}.",
             _capturedContext.AppName,
-            _capturedContext.ProcessName);
+            _capturedContext.ProcessName,
+            _capturedContext.HasSelection);
         await _audio.StartAsync(ct).ConfigureAwait(false);
         _machine.TransitionTo(DictationState.Recording);
     }
@@ -98,10 +114,10 @@ public sealed class DictationPipeline
                 processed = string.Empty;
                 status = "empty";
             }
-            else if (_request.Settings.PostProcessingEnabled)
+            else if (_request.Settings.PostProcessingEnabled || IsCommand(_request.Intent))
             {
                 processed = await _postProcessing
-                    .CleanupAsync(new PostProcessingRequest(raw, _request.Settings, _capturedContext), ct)
+                    .CleanupAsync(new PostProcessingRequest(raw, _request.Settings, _capturedContext, _request.Intent), ct)
                     .ConfigureAwait(false) ?? string.Empty;
                 status = "ok";
             }
@@ -191,4 +207,7 @@ public sealed class DictationPipeline
 
         return Task.CompletedTask;
     }
+
+    private static bool IsCommand(DictationIntent intent)
+        => intent is DictationIntent.CommandAutomatic or DictationIntent.CommandManual;
 }

@@ -1,4 +1,5 @@
 using FreeFlow.Core.Abstractions;
+using FreeFlow.Core.Context;
 using FreeFlow.Core.History;
 using FreeFlow.Core.Input;
 using FreeFlow.Core.Pipeline;
@@ -71,6 +72,8 @@ public static class RealPlatformServiceCollectionExtensions
                 sp.GetService<ILogger<HttpPostProcessingClient>>()));
 
         services.AddSingleton<IContextService, ForegroundWindowContextService>();
+        services.AddSingleton<ISelectionReader>(sp =>
+            new ClipboardSelectionReader(sp.GetService<ILogger<ClipboardSelectionReader>>()));
         services.AddSingleton<IClipboardPasteService>(sp =>
             new Win32ClipboardPasteService(sp.GetService<ILogger<Win32ClipboardPasteService>>()));
 

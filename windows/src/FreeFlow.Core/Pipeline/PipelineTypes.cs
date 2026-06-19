@@ -67,7 +67,8 @@ public sealed record TranscriptionOptions(string CustomVocabulary);
 public sealed record PostProcessingRequest(
     string RawTranscript,
     DictationSettings Settings,
-    CaptureContext Context);
+    CaptureContext Context,
+    DictationIntent Intent = DictationIntent.Dictation);
 
 /// <summary>
 /// Recorded result of a single pipeline run. The Windows analog of the macOS

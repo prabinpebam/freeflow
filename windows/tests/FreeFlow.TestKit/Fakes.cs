@@ -100,6 +100,22 @@ public sealed class StaticContextService : IContextService
         => Task.FromResult(_context);
 }
 
+/// <summary>Scripted selection reader: returns a fixed selection (or null).</summary>
+public sealed class FakeSelectionReader : FreeFlow.Core.Context.ISelectionReader
+{
+    private readonly string? _selection;
+
+    public FakeSelectionReader(string? selection) => _selection = selection;
+
+    public int Reads { get; private set; }
+
+    public Task<string?> TryReadSelectionAsync(CancellationToken ct = default)
+    {
+        Reads++;
+        return Task.FromResult(_selection);
+    }
+}
+
 /// <summary>
 /// In-memory clipboard + paste recorder that preserves/restores the clipboard
 /// around each paste (in a finally block) so the restore invariant holds even

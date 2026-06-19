@@ -685,6 +685,19 @@ Exit criteria:
 
 - Context/command mode works in validated app subset with explicit fallback behavior
 
+> Status (Phase 5 baseline complete): Prompt construction moved into a pure Core
+> `ContextPromptBuilder` (shared by the HTTP cleanup client and the inner loop), producing
+> two shapes — dictation cleanup and command/edit. `PostProcessingRequest` now carries the
+> `DictationIntent`. Command/edit mode: the pipeline captures the current selection via a new
+> `ISelectionReader` seam when intent is a command, embeds it in the system prompt, and runs
+> the model even when global cleanup is toggled off; with no selection it falls back to a
+> documented echo behaviour. Platform adds `ClipboardSelectionReader` (Ctrl+C copy → read →
+> restore baseline, L4) wired into real DI. Foreground app metadata was already captured in
+> Phase 2. Tests: L1 `ContextPromptBuilder` (dictation/command/overrides/vocab/language) and
+> L3 command-mode pipeline (selection capture, toggle-off behaviour, no-selection fallback).
+> Inner loop green at 107 tests; Platform + App build x64 clean. Follow-on (Phase 7): richer
+> UI-Automation selection extraction and a per-app validated allow-list.
+
 ## Phase 6: Packaging, updates, and beta hardening (Weeks 9-10)
 
 Tasks:
