@@ -1,27 +1,32 @@
 <#
 .SYNOPSIS
-    Produce a clean, portable FreeFlow layout: a single subfolder holding the
-    whole self-contained app, with a launcher shortcut at the root so the
-    executable is easy to find and the "mess" (runtime DLLs, resources) stays
-    tucked away.
+    Produce a clean, portable FreeFlow layout: a real FreeFlow.exe at the root
+    with all DLLs, language packs, and other files tucked into an "app"
+    subfolder.
 
 .DESCRIPTION
     A self-contained WinUI 3 app cannot have its DLLs relocated into a subfolder
-    while leaving only the exe at the root: the .NET host resolves framework
+    while leaving only its own exe at the root: the .NET host resolves framework
     assemblies by flat paths next to the exe, and WinUI's WinRT activation
-    manifest registers its native DLLs next to the exe. Both break if moved.
+    manifest registers its native DLLs next to the exe. Both break if moved
+    (verified: "System.Runtime not found" / "ClassFactory cannot supply
+    requested class").
 
-    The robust, idiomatic Windows layout is therefore:
+    So the whole self-contained app is published into an "app" subfolder, and a
+    tiny standalone launcher (scripts/windows/launcher/Launcher.cs, compiled to
+    FreeFlow.exe) is placed at the root. The launcher targets .NET Framework 4.x
+    (present on all supported Windows), so the root exe has no extra dependency
+    of its own. It starts app\FreeFlow.App.exe with the working directory set to
+    the app folder, so all assembly/native/WinRT resolution works exactly as a
+    normal publish.
+
+    Resulting layout:
 
         <OutputDir>\
-            FreeFlow.lnk          <- launcher shortcut (the "executable outside")
-            FreeFlow\             <- everything else (the app + runtime)
+            FreeFlow.exe      <- double-click this
+            app\              <- all DLLs / language packs / resources / runtime
                 FreeFlow.App.exe
-                ...all DLLs/resources...
-
-    Double-clicking FreeFlow.lnk runs FreeFlow\FreeFlow.App.exe with its working
-    directory set to the app folder, so all resolution works exactly as a normal
-    publish. The shortcut carries the app icon.
+                ...
 
 .PARAMETER Platform
     x86 (default), x64, or ARM64.
@@ -47,15 +52,15 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..' '..')
 $appProject = Join-Path $repoRoot 'windows' 'src' 'FreeFlow.App' 'FreeFlow.App.csproj'
 $iconPath = Join-Path $repoRoot 'windows' 'src' 'FreeFlow.App' 'Assets' 'AppIcon.ico'
+$launcherSrc = Join-Path $PSScriptRoot 'launcher' 'Launcher.cs'
 
 $rid = "win-$($Platform.ToLowerInvariant())"
 if (-not $OutputDir) {
     $OutputDir = Join-Path $repoRoot 'artifacts' 'portable' $rid
 }
 
-$appFolderName = 'FreeFlow'
-$appDir = Join-Path $OutputDir $appFolderName
-$shortcutPath = Join-Path $OutputDir 'FreeFlow.lnk'
+$appDir = Join-Path $OutputDir 'app'
+$launcherExe = Join-Path $OutputDir 'FreeFlow.exe'
 
 Write-Host "Publishing self-contained $rid (Platform=$Platform, Version=$Version)..." -ForegroundColor Cyan
 
@@ -77,17 +82,36 @@ if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $rid." }
 $targetExe = Join-Path $appDir 'FreeFlow.App.exe'
 if (-not (Test-Path $targetExe)) { throw "Published exe not found at $targetExe." }
 
-Write-Host "Creating launcher shortcut: $shortcutPath" -ForegroundColor Cyan
-$shell = New-Object -ComObject WScript.Shell
-$lnk = $shell.CreateShortcut($shortcutPath)
-$lnk.TargetPath = $targetExe
-$lnk.WorkingDirectory = $appDir
-$lnk.Description = 'FreeFlow'
-if (Test-Path $iconPath) { $lnk.IconLocation = "$iconPath,0" }
-$lnk.Save()
+Write-Host "Compiling root launcher FreeFlow.exe..." -ForegroundColor Cyan
+
+# .NET Framework C# compiler is present on every Windows install. The /platform
+# matches the app so the launcher bitness is consistent; the launcher itself has
+# no managed dependencies beyond the always-present .NET Framework 4.x.
+$cscPlatform = if ($Platform -ieq 'x86') { 'x86' } elseif ($Platform -ieq 'arm64') { 'anycpu' } else { 'x64' }
+$csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+if (-not (Test-Path $csc)) {
+    $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe'
+}
+if (-not (Test-Path $csc)) { throw "Could not find the .NET Framework C# compiler (csc.exe)." }
+
+$cscArgs = @(
+    '/nologo',
+    '/target:winexe',
+    "/platform:$cscPlatform",
+    "/out:$launcherExe",
+    '/reference:System.dll',
+    '/reference:System.Windows.Forms.dll'
+)
+if (Test-Path $iconPath) { $cscArgs += "/win32icon:$iconPath" }
+$cscArgs += $launcherSrc
+
+& $csc @cscArgs
+if ($LASTEXITCODE -ne 0) { throw "Launcher compilation failed." }
+if (-not (Test-Path $launcherExe)) { throw "Launcher exe was not produced." }
 
 $appItemCount = (Get-ChildItem $appDir | Measure-Object).Count
+$launcherKb = [math]::Round((Get-Item $launcherExe).Length / 1KB, 1)
 Write-Host "`nDone." -ForegroundColor Green
 Write-Host "Portable layout: $OutputDir" -ForegroundColor Green
-Write-Host "  FreeFlow.lnk           (launch this)" -ForegroundColor Green
-Write-Host "  $appFolderName\  ($appItemCount top-level items)" -ForegroundColor Green
+Write-Host "  FreeFlow.exe   ($launcherKb KB launcher — double-click this)" -ForegroundColor Green
+Write-Host "  app\           ($appItemCount top-level items: DLLs, language packs, resources)" -ForegroundColor Green
