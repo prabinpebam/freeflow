@@ -173,6 +173,18 @@ public sealed class InMemoryClipboardPasteService : IClipboardPasteService
     }
 }
 
+/// <summary>Records press-enter keystroke requests for assertions.</summary>
+public sealed class RecordingKeystrokeSender : IKeystrokeSender
+{
+    public int EnterCount { get; private set; }
+
+    public Task PressEnterAsync(CancellationToken ct = default)
+    {
+        EnterCount++;
+        return Task.CompletedTask;
+    }
+}
+
 /// <summary>Deterministic, seeded id provider so run ids are reproducible.</summary>
 public sealed class SeededIdProvider : IIdProvider
 {

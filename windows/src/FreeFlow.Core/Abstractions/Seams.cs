@@ -57,6 +57,16 @@ public interface IClipboardPasteService
     Task PasteTextAsync(string text, CancellationToken ct = default);
 }
 
+/// <summary>
+/// Sends discrete keystrokes to the focused app (e.g. the Return key for the
+/// spoken "press enter" command). Separate from the clipboard paste seam so the
+/// deterministic inner loop can fake it without touching real input.
+/// </summary>
+public interface IKeystrokeSender
+{
+    Task PressEnterAsync(CancellationToken ct = default);
+}
+
 /// <summary>Identifier seam so run ids are deterministic under test.</summary>
 public interface IIdProvider
 {

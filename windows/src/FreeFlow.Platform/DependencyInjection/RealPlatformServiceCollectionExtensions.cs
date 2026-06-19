@@ -90,6 +90,8 @@ public static class RealPlatformServiceCollectionExtensions
                 sp.GetService<ILogger<PolicyAwareSelectionReader>>()));
         services.AddSingleton<IClipboardPasteService>(sp =>
             new Win32ClipboardPasteService(sp.GetService<ILogger<Win32ClipboardPasteService>>()));
+        services.AddSingleton<IKeystrokeSender>(sp =>
+            new Win32KeystrokeSender(sp.GetService<ILogger<Win32KeystrokeSender>>()));
 
         services.AddSingleton<IHistoryStore>(sp =>
             new JsonHistoryStore(

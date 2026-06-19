@@ -96,4 +96,52 @@ public class DictationPipelineTests
         run.PostProcessingStatus.Should().Be("skipped");
         clipboard.LastPasted.Should().Be("um hello world");
     }
+
+    [Fact]
+    public async Task Spoken_press_enter_strips_command_pastes_text_and_presses_enter()
+    {
+        var clipboard = new InMemoryClipboardPasteService();
+        var keystrokes = new RecordingKeystrokeSender();
+        var pipeline = new DictationPipeline(
+            new FixtureAudioCapture(new AudioClip(new byte[3200])),
+            new CassetteTranscriptionClient("send it press enter"),
+            new ScriptedPostProcessingClient("Send it, press enter."),
+            new StaticContextService(new CaptureContext("Notepad", "notepad", "Untitled - Notepad", null)),
+            clipboard,
+            new SeededIdProvider(),
+            new FakeTimeProvider(DateTimeOffset.Parse("2026-06-19T00:00:00Z")),
+            keystrokes: keystrokes);
+
+        await pipeline.StartRecordingAsync(Request());
+        var run = await pipeline.StopAndProcessAsync();
+
+        clipboard.LastPasted.Should().Be("Send it");
+        run.PostProcessedTranscript.Should().Be("Send it");
+        keystrokes.EnterCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Press_enter_is_not_triggered_when_disabled()
+    {
+        var clipboard = new InMemoryClipboardPasteService();
+        var keystrokes = new RecordingKeystrokeSender();
+        var pipeline = new DictationPipeline(
+            new FixtureAudioCapture(new AudioClip(new byte[3200])),
+            new CassetteTranscriptionClient("send it press enter"),
+            new ScriptedPostProcessingClient("Send it, press enter."),
+            new StaticContextService(new CaptureContext("Notepad", "notepad", "Untitled - Notepad", null)),
+            clipboard,
+            new SeededIdProvider(),
+            new FakeTimeProvider(DateTimeOffset.Parse("2026-06-19T00:00:00Z")),
+            keystrokes: keystrokes);
+
+        await pipeline.StartRecordingAsync(new DictationRequest
+        {
+            Settings = new DictationSettings { PostProcessingEnabled = true, PressEnterEnabled = false },
+        });
+        await pipeline.StopAndProcessAsync();
+
+        clipboard.LastPasted.Should().Be("Send it, press enter.");
+        keystrokes.EnterCount.Should().Be(0);
+    }
 }

@@ -19,6 +19,7 @@ public sealed class DictationPipeline
     private readonly IContextService _context;
     private readonly IClipboardPasteService _paste;
     private readonly ISelectionReader? _selection;
+    private readonly IKeystrokeSender? _keystrokes;
     private readonly IIdProvider _ids;
     private readonly TimeProvider _time;
     private readonly ILogger<DictationPipeline> _logger;
@@ -38,7 +39,8 @@ public sealed class DictationPipeline
         TimeProvider? time = null,
         ILogger<DictationPipeline>? logger = null,
         IHistoryStore? history = null,
-        ISelectionReader? selection = null)
+        ISelectionReader? selection = null,
+        IKeystrokeSender? keystrokes = null)
     {
         _audio = audio;
         _transcription = transcription;
@@ -50,6 +52,7 @@ public sealed class DictationPipeline
         _logger = logger ?? NullLogger<DictationPipeline>.Instance;
         _history = history;
         _selection = selection;
+        _keystrokes = keystrokes;
         _machine.Transitioned += (from, to) =>
             _logger.LogDebug("Dictation state {From} -> {To}", from, to);
     }
@@ -128,11 +131,25 @@ public sealed class DictationPipeline
             }
 
             _machine.TransitionTo(DictationState.Pasting);
+
+            // Honor a spoken "press enter": strip the trailing command from the
+            // text we paste, then submit a Return key after pasting.
+            var pressEnter = false;
+            if (_request.Settings.PressEnterEnabled && !string.IsNullOrEmpty(processed))
+            {
+                (processed, pressEnter) = PressEnterCommand.Detect(processed);
+            }
+
             var pasted = false;
             if (!string.IsNullOrEmpty(processed))
             {
                 await _paste.PasteTextAsync(processed, ct).ConfigureAwait(false);
                 pasted = true;
+            }
+
+            if (pressEnter && _keystrokes is not null)
+            {
+                await _keystrokes.PressEnterAsync(ct).ConfigureAwait(false);
             }
 
             var run = new PipelineRun

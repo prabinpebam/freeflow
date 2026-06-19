@@ -1,17 +1,16 @@
-Add system tray presence and hide-to-tray
+Add spoken "press enter" command
 
-Give FreeFlow the always-available background presence of the macOS menu-bar
-app. Win32 TrayIcon (Shell_NotifyIcon + window subclass) shows a notification
-icon with an Open / Settings / Quit context menu. Closing the main window now
-hides it to the tray (AppWindow.Closing canceled) so the global shortcuts keep
-running in the background; Quit performs the real exit and cleanup.
+Parity with the macOS press-enter feature: saying "…press enter" at the end of
+a dictation now strips the trailing command from the pasted text and submits a
+Return keystroke so the host app sends.
 
-- TrayIcon uses a 32/64-bit-safe SetWindowLongPtr wrapper (x86 only exports
-  SetWindowLongW) and TrackPopupMenu with TPM_RETURNCMD for synchronous menu
-  handling, loading the app .ico for the tray glyph.
-- App wires tray events to show/settings/quit on the UI dispatcher.
+- Core: PressEnterCommand (pure, regex ported from macOS) detects/strips the
+  trailing command; DictationSettings.PressEnterEnabled (default true).
+- Core: IKeystrokeSender seam; pipeline pastes the cleaned text then presses
+  Enter when detected and enabled.
+- Platform: Win32KeystrokeSender (SendInput scan-code Return); wired in DI.
+- Tests: L0 PressEnterCommandTests + L3 pipeline tests (enabled/disabled).
 
-Verified: portable x86 launches clean (no crash log) with tray + overlay +
-sounds startup wiring.
+Inner loop GREEN at 186.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
