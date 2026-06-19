@@ -24,6 +24,15 @@
     <EnableMsixTooling>false</EnableMsixTooling>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!--
+      Ship only English satellite resources. The Windows App SDK otherwise emits
+      ~100 per-locale folders next to the exe, which dominate the publish output.
+      Keeping en-US removes that clutter with no functional loss for this app.
+    -->
+    <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
+    <!-- No loose .pdb files in published/distributed output. -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
     <!-- We provide our own Main (Program.cs) so Velopack's hooks run first. -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
