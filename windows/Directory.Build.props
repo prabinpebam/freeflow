@@ -5,5 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Deterministic>true</Deterministic>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- Single source of truth for the app/assembly version (see packaging-and-updates.md). -->
+    <Version>0.1.0</Version>
   </PropertyGroup>
 </Project>

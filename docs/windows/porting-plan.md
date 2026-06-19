@@ -711,6 +711,17 @@ Exit criteria:
 - Public beta candidate
 - Known limitation list published
 
+Status (baseline complete):
+
+- [x] Single version source `<Version>` in `windows/Directory.Build.props` (0.1.0)
+- [x] Core `SemanticVersion` (SemVer 2.0 parse/compare, pre-release precedence) — L0
+- [x] Core `UpdatePlanner` + `ReleaseInfo`/`UpdateDecision` + `ReleaseChannel` — L0
+- [x] Core `IUpdateService` seam (network fetch/apply at Platform L4/L5)
+- [x] `scripts/windows/pack.ps1` (publish self-contained x64/arm64 + Velopack `vpk pack`, optional signing)
+- [x] `docs/windows/packaging-and-updates.md` (WiX MSI + Velopack/GitHub Releases pipeline)
+- Inner loop GREEN at 132 tests; Platform + App build x64 clean.
+- Follow-on: real Velopack `UpdateManager` adapter implementing `IUpdateService` in Platform DI; signed MSI (WiX v4) CI job; staging upgrade-cycle smoke test.
+
 ## Phase 7: Advanced parity closure (Post-v1)
 
 Tasks:
