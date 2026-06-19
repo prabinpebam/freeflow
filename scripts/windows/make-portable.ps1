@@ -42,7 +42,7 @@ param(
     [ValidateSet('x86', 'x64', 'ARM64')]
     [string]$Platform = 'x86',
 
-    [string]$Version = '0.1.0',
+    [string]$Version = '0.2.0',
 
     [string]$OutputDir
 )

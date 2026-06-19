@@ -36,6 +36,21 @@ public partial class App : Application
         Services = BuildServices();
     }
 
+    /// <summary>
+    /// Brings the main window to the foreground, restoring it from the tray if
+    /// hidden. Invoked when a second instance is launched (e.g. the user
+    /// double-clicks the portable launcher again) so re-launching reopens the
+    /// running app instead of silently doing nothing — parity with the macOS
+    /// "reopen on dock click" behavior. Safe to call from any thread.
+    /// </summary>
+    public void ActivateMainWindow()
+    {
+        if (_window is MainWindow main)
+        {
+            main.DispatcherQueue.TryEnqueue(main.ShowFromTray);
+        }
+    }
+
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
         try

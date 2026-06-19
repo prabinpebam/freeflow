@@ -18,6 +18,13 @@ namespace FreeFlow_App;
 public static class Program
 {
     private static Mutex? _singleInstanceMutex;
+    private static EventWaitHandle? _showWindowSignal;
+
+    // Process-wide names for the single-instance primitives. The mutex enforces a
+    // single running instance; the event lets a second launch ask the first to
+    // show its window. Local (per-session) scope is correct for a per-user app.
+    private const string SingleInstanceMutexName = "FreeFlow.SingleInstance";
+    private const string ShowWindowEventName = "FreeFlow.ShowWindowSignal";
 
     [STAThread]
     private static void Main(string[] args)
@@ -28,12 +35,19 @@ public static class Program
             // and exit early when invoked for one of those hooks.
             VelopackApp.Build().Run();
 
-            // Single-instance guard: if another FreeFlow is already running, exit.
-            _singleInstanceMutex = new Mutex(initiallyOwned: true, "FreeFlow.SingleInstance", out var isNew);
+            // Single-instance guard: if another FreeFlow is already running, ask it
+            // to surface its window (it may be hidden in the tray) and then exit, so
+            // re-launching the app reopens it instead of appearing to do nothing.
+            _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out var isNew);
             if (!isNew)
             {
+                SignalRunningInstanceToShow();
                 return;
             }
+
+            // This is the primary instance: listen for later launches asking us to
+            // bring the window forward.
+            StartSecondInstanceListener();
 
             Microsoft.UI.Xaml.Application.Start(p =>
             {
@@ -51,6 +65,49 @@ public static class Program
             // visible error. Persist the crash so it can be diagnosed post-mortem.
             WriteCrashLog(ex);
             throw;
+        }
+    }
+
+    private static void SignalRunningInstanceToShow()
+    {
+        try
+        {
+            if (EventWaitHandle.TryOpenExisting(ShowWindowEventName, out var existing))
+            {
+                existing.Set();
+                existing.Dispose();
+            }
+        }
+        catch
+        {
+            // Best effort: if we cannot signal, simply exiting is still correct.
+        }
+    }
+
+    private static void StartSecondInstanceListener()
+    {
+        _showWindowSignal = new EventWaitHandle(false, EventResetMode.AutoReset, ShowWindowEventName);
+        var listener = new Thread(SecondInstanceListenerLoop)
+        {
+            IsBackground = true,
+            Name = "FreeFlow-SingleInstance",
+        };
+        listener.Start();
+    }
+
+    private static void SecondInstanceListenerLoop()
+    {
+        while (_showWindowSignal is not null)
+        {
+            try
+            {
+                _showWindowSignal.WaitOne();
+                (Microsoft.UI.Xaml.Application.Current as App)?.ActivateMainWindow();
+            }
+            catch
+            {
+                break;
+            }
         }
     }
 
