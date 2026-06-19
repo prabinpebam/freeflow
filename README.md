@@ -114,6 +114,12 @@ defaults delete com.zachlatta.freeflow context_request_timeout_seconds
 If you want to build a Windows-native version of FreeFlow, see the detailed implementation and release roadmap in:
 
 - [`docs/windows/porting-plan.md`](docs/windows/porting-plan.md)
+- Supporting planning artifacts:
+  - [`docs/windows/decisions.md`](docs/windows/decisions.md)
+  - [`docs/windows/parity-matrix.md`](docs/windows/parity-matrix.md)
+  - [`docs/windows/test-matrix.md`](docs/windows/test-matrix.md)
+  - [`docs/windows/known-limitations.md`](docs/windows/known-limitations.md)
+  - [`docs/windows/release-checklist.md`](docs/windows/release-checklist.md)
 
 ## License
 
