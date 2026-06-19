@@ -135,23 +135,37 @@ foreach ($tool in 'signtool.exe', 'makeappx.exe') {
     }
 }
 
-# --- 7. Visual Studio / Build Tools (MSBuild + WinUI templates) -------------
+# --- 7. Visual Studio / Build Tools (MSBuild) -------------------------------
 $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
+$winuiVsComponent = $null
 if (Test-Path $vswhere) {
     $products = & $vswhere -products * -property displayName 2>$null
     if ($products) {
         Add-Result -Name 'Visual Studio / Build Tools' -Status 'PASS' -Detail (($products) -join '; ')
-        $winui = & $vswhere -products * -requires Microsoft.VisualStudio.ComponentGroup.WindowsAppSDK.Cs -property displayName 2>$null
-        if ($winui) {
-            Add-Result -Name 'Windows App SDK C# templates' -Status 'PASS' -Detail (($winui) -join '; ')
-        } else {
-            Add-Result -Name 'Windows App SDK C# templates' -Status 'WARN' -Detail 'Component not detected.' -Fix 'In Visual Studio Installer add ".NET Desktop Development" + "Windows App SDK C# Templates".'
-        }
+        $winuiVsComponent = & $vswhere -products * -requires Microsoft.VisualStudio.ComponentGroup.WindowsAppSDK.Cs -property displayName 2>$null
     } else {
         Add-Result -Name 'Visual Studio / Build Tools' -Status 'WARN' -Detail 'vswhere found but no products listed.' -Fix 'Install VS 2022 (or Build Tools) with .NET desktop + Windows App SDK.'
     }
 } else {
     Add-Result -Name 'Visual Studio / Build Tools' -Status 'WARN' -Detail 'Not installed.' -Fix 'winget install Microsoft.VisualStudio.2022.BuildTools (add .NET desktop + Windows App SDK workloads).'
+}
+
+# --- 7b. Windows App SDK / WinUI 3 C# templates -----------------------------
+# Accept either the Visual Studio component OR the dotnet CLI template pack
+# (CLI pack works on Build Tools-only machines without the full VS IDE).
+$dotnetWinuiPack = $null
+try {
+    $installedPacks = & dotnet new uninstall 2>$null
+    if ($installedPacks -match 'WindowsAppSDK\.WinUI\.CSharp\.Templates') {
+        $dotnetWinuiPack = 'Microsoft.WindowsAppSDK.WinUI.CSharp.Templates (dotnet CLI pack)'
+    }
+} catch {}
+if ($winuiVsComponent) {
+    Add-Result -Name 'Windows App SDK C# templates' -Status 'PASS' -Detail (($winuiVsComponent) -join '; ')
+} elseif ($dotnetWinuiPack) {
+    Add-Result -Name 'Windows App SDK C# templates' -Status 'PASS' -Detail $dotnetWinuiPack
+} else {
+    Add-Result -Name 'Windows App SDK C# templates' -Status 'WARN' -Detail 'Not detected (VS component or dotnet template pack).' -Fix 'Run: dotnet new install Microsoft.WindowsAppSDK.WinUI.CSharp.Templates  (or add the VS "Windows App SDK C# Templates" component).'
 }
 
 # --- 8. Editor (VS Code / Cursor) ------------------------------------------

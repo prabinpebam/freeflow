@@ -43,14 +43,16 @@ templates. In the **Visual Studio Installer**, install these on VS 2022 or Build
 - **Windows 11 SDK (10.0.22621 or later)** component
 - **MSVC v143 build tools** (transitive native deps / packaging)
 
-Install the project templates for `dotnet new` (optional but convenient):
+Install the project templates for `dotnet new` (recommended — works on Build Tools-only
+machines without the full Visual Studio IDE):
 
 ```powershell
-dotnet new install Microsoft.WindowsAppSDK.ProjectTemplates
+dotnet new install Microsoft.WindowsAppSDK.WinUI.CSharp.Templates
 ```
 
-> If the template package ID changes, prefer creating the first project from the
-> Visual Studio "Blank App, Packaged (WinUI 3 in Desktop)" template, then edit in VS Code.
+> This is the official Microsoft template pack (short names `winui`/`winui3`/`winui-mvvm`,
+> etc.). The verification script accepts **either** this CLI pack **or** the Visual Studio
+> "Windows App SDK C# Templates" component.
 
 ## 3. Required VS Code extensions
 

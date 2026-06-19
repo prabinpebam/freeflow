@@ -61,20 +61,24 @@ The port is successful when all are true:
 - Immediate parity for all dev/debug macOS-only tooling
 - Cross-platform engine merge with macOS code during initial port
 
-## 3. Pre-execution decisions (must close before implementation)
+## 3. Pre-execution decisions (resolved before implementation)
 
-These specs must be decided before Phase 2 (solution bootstrap) starts:
+These specs are now **resolved** in [`decisions.md`](decisions.md) (ADR-001..009) and are locked
+before Phase 2 (solution bootstrap) starts:
 
-| Decision | Options | Owner | Due |
-|---|---|---|---|
-| Packaging strategy | MSIX vs signed EXE installer | Maintainer | Before scaffolding |
-| Update model | Store/MSIX auto-update vs GitHub updater | Maintainer | Before update module |
-| OS support floor | Win11 only vs Win10+Win11 | Maintainer | Before test matrix lock |
-| Telemetry policy | Local-only diagnostics vs opt-in telemetry | Maintainer | Before beta |
-| Context defaults | Context on/off default, screenshot default | Maintainer | Before setup UX |
-| Command mode scope | Minimal transform set vs full parity | Maintainer | Before v1 freeze |
+| Decision | Resolution | ADR |
+|---|---|---|
+| Packaging strategy | Unpackaged self-contained app + signed MSI (WiX); MSIX optional v2/Store | ADR-001 |
+| Update model | Velopack in-app auto-update fed by GitHub Releases | ADR-002 |
+| OS support floor | Windows 10 1809 (17763)+ and Windows 11; x64 + ARM64 | ADR-003 |
+| Telemetry policy | No network telemetry in v1; local Serilog logs + export diagnostics | ADR-004 |
+| Context defaults | Metadata + selected-text ON; screenshot context OFF by default | ADR-005 |
+| Command mode scope | Dictation + command/edit in v1; Voice Macros deferred to v2 | ADR-006 |
+| Tray-icon component | H.NotifyIcon | ADR-007 |
+| AI-eval thresholds/corpus | Maintainer-owned `eval.config.json` + in-repo corpus; baseline-then-tune | ADR-008 |
+| Default shortcut scheme | Right Ctrl hold / Ctrl+Alt+Space toggle / Ctrl+Alt+V paste-again via WH_KEYBOARD_LL (`Fn` not interceptable) | ADR-009 |
 
-Unresolved items above are release blockers.
+Any later reopening of these requires a superseding ADR.
 
 ## 4. Technical architecture
 
@@ -225,13 +229,23 @@ Implementation notes:
 
 ## 6.2 Hotkey subsystem
 
+Default scheme (ADR-009; `Fn`/`Command-Fn` from macOS are not interceptable on Windows):
+
+- Hold-to-talk: **Right Ctrl** (press/hold/release)
+- Toggle: **Ctrl+Alt+Space**
+- Paste-again: **Ctrl+Alt+V**
+- All bindings remappable, including single-key bindings.
+
 Implementation plan:
 
-1. Primary backend: `RegisterHotKey`
-2. Fallback backend: low-level keyboard hook (only when required)
-3. Unified event normalization layer
-4. Hotkey conflict detector
-5. Shortcut capture component for settings/setup
+1. Primary backend: global low-level keyboard hook (`WH_KEYBOARD_LL`) — required for
+   press/hold/release semantics and lone-key bindings that `RegisterHotKey` cannot express.
+2. Pass-through behavior: emit PTT only when the bound key is pressed alone; forward normal
+   key/chord input otherwise (preserve Right Ctrl shortcuts).
+3. Optional `RegisterHotKey` path for simple chord toggles where sufficient.
+4. Unified event normalization layer
+5. Hotkey conflict detector
+6. Shortcut capture component for settings/setup (supports single-key capture)
 
 Diagnostic requirements:
 
@@ -316,9 +330,9 @@ Requirements:
 
 ## 6.8 Update subsystem
 
-Requirements depend on packaging decision:
+Velopack-based in-app updates fed by GitHub Releases (ADR-002):
 
-- Release feed parsing
+- Release feed parsing (Velopack release assets)
 - Semantic version comparison
 - Deferred reminder logic
 - Install workflow and relaunch prompt
@@ -538,7 +552,7 @@ Tasks:
   PowerShell 7, VS Code.
 - Install the VS Code extension set (C# Dev Kit, C#, XML, EditorConfig, PowerShell, GitHub Actions).
 - Confirm packaging/signing tools resolve (`signtool.exe`, `makeappx.exe`).
-- Decide the tray-icon component and (un)packaged inner-loop approach (feeds ADR-001/ADR-007).
+- Tray-icon component (H.NotifyIcon) and unpackaged inner-loop approach are fixed (ADR-001/ADR-007).
 - Run the verification script and record results.
 
 Deliverables:
@@ -550,7 +564,8 @@ Deliverables:
 Exit criteria:
 
 - Environment verification reports zero required failures on all dev machines and CI.
-- A signed/unsigned sample MSIX can be produced locally (validates packaging toolchain).
+- A signed sample installer (WiX MSI) can be produced locally; the MSIX toolchain
+  (`makeappx`/`signtool`) is also validated for the optional future Store/sideload path.
 
 ## Phase 1: Spec lock and parity inventory (Week 1)
 
@@ -628,7 +643,7 @@ Exit criteria:
 
 Tasks:
 
-- Packaging and update path
+- Packaging (WiX MSI) and Velopack update path
 - Signed release artifacts
 - Compatibility sweep and bug burn-down
 
