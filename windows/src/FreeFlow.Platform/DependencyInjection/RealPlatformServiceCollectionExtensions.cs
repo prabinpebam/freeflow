@@ -58,10 +58,12 @@ public static class RealPlatformServiceCollectionExtensions
         services.AddSingleton<TimeProvider>(TimeProvider.System);
         services.AddSingleton<IIdProvider, SystemIdProvider>();
 
-        services.AddSingleton<IAudioCaptureService>(sp =>
+        services.AddSingleton<NAudioCaptureService>(sp =>
             new NAudioCaptureService(
                 sp.GetService<ILogger<NAudioCaptureService>>(),
                 selectedDeviceId: () => sp.GetRequiredService<ISettingsStore>().Load().General.InputDeviceId));
+        services.AddSingleton<IAudioCaptureService>(sp => sp.GetRequiredService<NAudioCaptureService>());
+        services.AddSingleton<IAudioLevelMonitor>(sp => sp.GetRequiredService<NAudioCaptureService>());
         services.AddSingleton<IAudioDeviceProvider, NAudioDeviceProvider>();
 
         services.AddSingleton<ITranscriptionClient>(sp =>

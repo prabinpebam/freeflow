@@ -1,3 +1,4 @@
+using FreeFlow.Core.Abstractions;
 using FreeFlow.Core.Input;
 using System;
 using FreeFlow.Core.Pipeline;
@@ -23,6 +24,7 @@ public partial class App : Application
     private Window? _window;
     private DictationCoordinator? _coordinator;
     private IHotkeyService? _hotkeys;
+    private OverlayController? _overlay;
 
     public static IServiceProvider Services { get; private set; } = null!;
 
@@ -45,12 +47,27 @@ public partial class App : Application
 
             var main = new MainWindow();
             _window = main;
-            _window.Closed += (_, _) => _hotkeys?.Stop();
+
+            // Recording overlay: live mic meter while recording, "Transcribing…"
+            // while processing. Shown without activation so it never steals focus
+            // from the app being dictated into. Honors the General > overlay toggle.
+            var settingsStore = Services.GetRequiredService<ISettingsStore>();
+            _overlay = new OverlayController(
+                Services.GetRequiredService<DictationPipeline>(),
+                Services.GetService<IAudioLevelMonitor>(),
+                main.DispatcherQueue,
+                () => settingsStore.Load().General.ShowOverlay);
+
+            _window.Closed += (_, _) =>
+            {
+                _hotkeys?.Stop();
+                _overlay?.Dispose();
+            };
             _window.Activate();
 
             // First-run experience: if no transcription credentials are configured,
             // jump straight to Settings so the app is usable immediately.
-            var settings = Services.GetRequiredService<ISettingsStore>().Load();
+            var settings = settingsStore.Load();
             if (!settings.Providers.Transcription.HasCredentials)
             {
                 main.NavigateToSettings();

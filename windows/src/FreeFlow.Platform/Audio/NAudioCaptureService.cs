@@ -14,12 +14,13 @@ namespace FreeFlow.Platform.Audio;
 /// recording (falling back to the OS default when unset or unplugged). Device
 /// I/O is exercised by the L4/L5 tiers; the deterministic loop uses fixture audio.
 /// </summary>
-public sealed class NAudioCaptureService : IAudioCaptureService, IDisposable
+public sealed class NAudioCaptureService : IAudioCaptureService, IAudioLevelMonitor, IDisposable
 {
     private readonly ILogger<NAudioCaptureService> _logger;
     private readonly Func<string?>? _selectedDeviceId;
     private readonly int _sampleRate;
     private readonly int _channels;
+    private readonly AudioLevelNormalizer _level = new();
 
     private WaveInEvent? _waveIn;
     private MemoryStream? _buffer;
@@ -37,10 +38,13 @@ public sealed class NAudioCaptureService : IAudioCaptureService, IDisposable
         _channels = channels;
     }
 
+    public event Action<float>? LevelChanged;
+
     public Task StartAsync(CancellationToken ct = default)
     {
         Cleanup();
 
+        _level.Reset();
         _buffer = new MemoryStream();
         _stopped = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -91,7 +95,15 @@ public sealed class NAudioCaptureService : IAudioCaptureService, IDisposable
     }
 
     private void OnDataAvailable(object? sender, WaveInEventArgs e)
-        => _buffer?.Write(e.Buffer, 0, e.BytesRecorded);
+    {
+        _buffer?.Write(e.Buffer, 0, e.BytesRecorded);
+
+        if (LevelChanged is { } handler)
+        {
+            var rms = AudioLevelNormalizer.RmsFromPcm16(e.Buffer.AsSpan(0, e.BytesRecorded));
+            handler(_level.NormalizedLevel(rms));
+        }
+    }
 
     private void OnRecordingStopped(object? sender, StoppedEventArgs e)
     {

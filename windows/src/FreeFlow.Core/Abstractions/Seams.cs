@@ -12,6 +12,18 @@ public interface IAudioCaptureService
 }
 
 /// <summary>
+/// Optional companion to <see cref="IAudioCaptureService"/> that publishes a
+/// smoothed 0..1 microphone level while recording, so the UI can drive a live
+/// meter (e.g. the recording overlay). Kept separate from the capture seam so
+/// the deterministic inner-loop fakes need not implement it.
+/// </summary>
+public interface IAudioLevelMonitor
+{
+    /// <summary>Raised with a normalized 0..1 input level as audio is captured.</summary>
+    event Action<float>? LevelChanged;
+}
+
+/// <summary>
 /// Enumerates the available microphone (audio input) devices so the settings UI
 /// can offer a selection. Backed by the platform audio stack; not used in the
 /// deterministic inner loop.
