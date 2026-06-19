@@ -4,6 +4,7 @@ using FreeFlow.Platform.Clipboard;
 using FreeFlow.Platform.Context;
 using FreeFlow.Platform.Mocks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace FreeFlow.Platform.DependencyInjection;
 
@@ -17,6 +18,13 @@ public static class PlatformServiceCollectionExtensions
 {
     public static IServiceCollection AddFreeFlowMockPlatform(this IServiceCollection services)
     {
+        // Ensure the logging host exists so every service can take an ILogger<T>.
+        // Skipped if the caller already configured logging (avoids duplicate sinks).
+        if (!services.Any(d => d.ServiceType == typeof(ILoggerFactory)))
+        {
+            services.AddFreeFlowLogging();
+        }
+
         services.AddSingleton<TimeProvider>(TimeProvider.System);
         services.AddSingleton<IIdProvider, SystemIdProvider>();
 

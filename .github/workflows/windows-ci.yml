@@ -1,0 +1,61 @@
+name: Windows CI
+
+# Fast inner-loop gate for the Windows port. Runs the deterministic test tiers
+# (L0-L3 + determinism guard) through the same agentic-loop driver an agent uses
+# locally, then publishes the machine-readable verdict and raw TRX results.
+#
+# Triggers only on changes under the Windows port so the macOS app's pipeline is
+# unaffected. PRs never run automatically against the upstream fork unless one is
+# opened explicitly.
+
+on:
+  push:
+    paths:
+      - 'windows/**'
+      - 'scripts/windows/**'
+      - '.github/workflows/windows-ci.yml'
+  pull_request:
+    paths:
+      - 'windows/**'
+      - 'scripts/windows/**'
+      - '.github/workflows/windows-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inner-loop:
+    name: Deterministic inner loop (L0-L3)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore windows/FreeFlow.Windows.sln
+
+      - name: Run agentic loop (run + evaluate -> verdict.json)
+        shell: pwsh
+        run: pwsh -File scripts/windows/run-agentic-loop.ps1 -Coverage
+
+      - name: Upload verdict and test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-verdict
+          path: |
+            artifacts/test/verdict.json
+            artifacts/test/**/*.trx
+            artifacts/test/**/coverage.cobertura.xml
+          if-no-files-found: warn

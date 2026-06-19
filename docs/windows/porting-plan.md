@@ -605,13 +605,17 @@ Exit criteria:
 > the `AddFreeFlowMockPlatform` DI extension), and a `FreeFlow.App` unpackaged WinUI 3 shell
 > (`WindowsPackageType=None`, retargeted to 19041) whose composition root resolves the pipeline
 > from DI and runs a full mock dictation round-trip. `FreeFlow.TestKit` supplies deterministic
-> fakes. The inner loop is green: 24 tests across `FreeFlow.Core.Tests` (L0) and
-> `FreeFlow.Pipeline.Tests` (L2 contract, L3 orchestration + a Reqnroll BDD scenario), and the
-> app launches with a live window. `scripts/windows/build-verdict.ps1` emits the `verdict.json`
-> contract and `scripts/windows/run-agentic-loop.ps1` drives run→evaluate, exiting green/red.
-> Still open for this phase: structured logging, the determinism guard test, and the Windows CI
-> workflow. Real platform adapters (hotkey, WASAPI audio, HTTP clients, clipboard paste) land in
-> Phase 3.
+> fakes. The inner loop is green: 26 tests across `FreeFlow.Core.Tests` (L0) and
+> `FreeFlow.Pipeline.Tests` (L2 contract, L3 orchestration, a determinism guard, and a
+> Reqnroll BDD scenario), and the app launches with a live window.
+> `scripts/windows/build-verdict.ps1` emits the `verdict.json` contract and
+> `scripts/windows/run-agentic-loop.ps1` drives run→evaluate, exiting green/red. Structured
+> logging is wired through DI (`AddFreeFlowLogging` registers a Debug sink plus a rolling
+> file sink under `%LOCALAPPDATA%\FreeFlow\logs`; the pipeline logs each stage via
+> `ILogger<DictationPipeline>`), the determinism guard re-runs the L3 path five times and
+> asserts byte-identical verdicts, and `.github/workflows/windows-ci.yml` runs the loop on
+> every push/PR touching the Windows port. Real platform adapters (hotkey, WASAPI audio,
+> HTTP clients, clipboard paste) land in Phase 3.
 
 ## Phase 3: Vertical slice MVP core (Weeks 3-4)
 

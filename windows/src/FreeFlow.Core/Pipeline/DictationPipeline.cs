@@ -1,5 +1,7 @@
 using FreeFlow.Core.Abstractions;
 using FreeFlow.Core.Context;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FreeFlow.Core.Pipeline;
 
@@ -17,6 +19,7 @@ public sealed class DictationPipeline
     private readonly IClipboardPasteService _paste;
     private readonly IIdProvider _ids;
     private readonly TimeProvider _time;
+    private readonly ILogger<DictationPipeline> _logger;
     private readonly DictationStateMachine _machine = new();
 
     private DictationRequest _request = new();
@@ -29,7 +32,8 @@ public sealed class DictationPipeline
         IContextService context,
         IClipboardPasteService paste,
         IIdProvider ids,
-        TimeProvider? time = null)
+        TimeProvider? time = null,
+        ILogger<DictationPipeline>? logger = null)
     {
         _audio = audio;
         _transcription = transcription;
@@ -38,6 +42,9 @@ public sealed class DictationPipeline
         _paste = paste;
         _ids = ids;
         _time = time ?? TimeProvider.System;
+        _logger = logger ?? NullLogger<DictationPipeline>.Instance;
+        _machine.Transitioned += (from, to) =>
+            _logger.LogDebug("Dictation state {From} -> {To}", from, to);
     }
 
     public DictationState State => _machine.State;
@@ -54,8 +61,13 @@ public sealed class DictationPipeline
     public async Task StartRecordingAsync(DictationRequest request, CancellationToken ct = default)
     {
         _request = request ?? new DictationRequest();
+        _logger.LogInformation("Starting dictation (intent={Intent}).", _request.Intent);
         _machine.TransitionTo(DictationState.Arming);
         _capturedContext = await _context.CaptureAsync(ct).ConfigureAwait(false);
+        _logger.LogDebug(
+            "Captured context app={App} process={Process}.",
+            _capturedContext.AppName,
+            _capturedContext.ProcessName);
         await _audio.StartAsync(ct).ConfigureAwait(false);
         _machine.TransitionTo(DictationState.Recording);
     }
@@ -72,6 +84,7 @@ public sealed class DictationPipeline
             var raw = await _transcription
                 .TranscribeAsync(clip, new TranscriptionOptions(_request.Settings.CustomVocabulary), ct)
                 .ConfigureAwait(false) ?? string.Empty;
+            _logger.LogDebug("Transcribed {Length} chars.", raw.Length);
 
             _machine.TransitionTo(DictationState.PostProcessing);
             string processed;
@@ -118,10 +131,16 @@ public sealed class DictationPipeline
 
             _machine.TransitionTo(DictationState.Completed);
             _machine.TransitionTo(DictationState.Idle);
+            _logger.LogInformation(
+                "Dictation complete (run={RunId} status={Status} pasted={Pasted}).",
+                run.Id,
+                status,
+                pasted);
             return run;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Dictation pipeline failed.");
             if (_machine.IsActive)
             {
                 _machine.TransitionTo(DictationState.Error);
