@@ -598,6 +598,16 @@ Exit criteria:
 - CI passes on Windows
 - Deterministic tiers (L0–L3) run and emit `verdict.json`
 
+> **Status (scaffolded).** The `windows/` solution now exists (`FreeFlow.Windows.sln`) with
+> `FreeFlow.Core` (state machine, pipeline orchestrator, seams, corpus loader), a minimal
+> `FreeFlow.Infrastructure` (OpenAI-compatible request factory), and `FreeFlow.TestKit`
+> (deterministic fakes). The inner loop is green: 24 tests across `FreeFlow.Core.Tests` (L0) and
+> `FreeFlow.Pipeline.Tests` (L2 contract, L3 orchestration + a Reqnroll BDD scenario).
+> `scripts/windows/build-verdict.ps1` emits the `verdict.json` contract and
+> `scripts/windows/run-agentic-loop.ps1` drives run→evaluate, exiting green/red.
+> Still open for this phase: DI/logging host, the determinism guard test, the WinUI app shell
+> ("launches with mock services"), and the Windows CI workflow.
+
 ## Phase 3: Vertical slice MVP core (Weeks 3-4)
 
 Tasks:

@@ -1,0 +1,17 @@
+# .NET build output
+bin/
+obj/
+
+# Test results & coverage
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage.cobertura.xml
+
+# IDE
+.vs/
+*.user
+
+# Reqnroll generates feature code-behind in-source on build
+*.feature.cs

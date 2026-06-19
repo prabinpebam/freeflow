@@ -109,7 +109,9 @@ Action items:
 ## 4. Test taxonomy (tiers)
 
 Tiers are tagged with a `[Trait("Tier","Lx")]` so the runner can select them. L0–L3 are the
-**deterministic inner loop**; L4–L5 are heavier/out-of-band.
+**deterministic inner loop**; L4–L5 are heavier/out-of-band. (Reqnroll BDD scenarios map their
+`@Tier:Lx` tag to `[Trait("Category","Tier:Lx")]` rather than a `Tier` trait — see §9.1 for why
+the loop uses an *exclusive* tier filter.)
 
 | Tier | Name | Scope | Hermetic? | Speed | Gates inner loop |
 |---|---|---|---|---|---|
@@ -224,16 +226,30 @@ Goal: an autonomous run/evaluate/fix cycle on the deterministic tiers.
 One command runs the loop tiers and emits a structured verdict:
 
 ```powershell
-# Run deterministic tiers, emit TRX + coverage
+# Run deterministic tiers, emit TRX (one per assembly) + coverage
 dotnet test windows/FreeFlow.Windows.sln `
-  --filter "Tier=L0|Tier=L1|Tier=L2|Tier=L3" `
-  --logger "trx;LogFileName=results.trx" `
+  --filter "Tier!=L4&Tier!=L5" `
+  --logger "trx;LogFilePrefix=results" `
   --results-directory artifacts/test `
   --collect:"XPlat Code Coverage"
 
 # Project TRX + Verify diffs + eval scores into a single verdict.json
 pwsh -File scripts/windows/build-verdict.ps1 -ResultsDir artifacts/test -Out artifacts/test/verdict.json
 ```
+
+> **Filter form matters (Reqnroll trait mapping).** Plain xUnit tests carry `[Trait("Tier","L0".."L3")]`.
+> Reqnroll maps a feature/scenario tag such as `@Tier:L3` to `[Trait("Category","Tier:L3")]` — **not** to
+> a `Tier` trait. An *inclusive* filter (`Tier=L0|...|L3`) therefore silently skips every BDD scenario.
+> The *exclusive* form `Tier!=L4&Tier!=L5` runs all inner-loop tests (untagged, `Tier`-tagged, and
+> Reqnroll `Category`-tagged) and excludes only the slow outer tiers. Keep L4 (UI/FlaUI) and L5
+> (live-eval) as plain xUnit tests tagged `[Trait("Tier","L4")]` / `[Trait("Tier","L5")]` so the
+> exclusion stays reliable. This is verified by the scaffold: the inclusive filter runs 23 tests, the
+> exclusive filter runs all 24 (the 24th being the `Dictation.feature` scenario).
+>
+> **TRX naming.** Use `LogFilePrefix=results` (not a fixed `LogFileName=results.trx`): on a multi-project
+> solution every test assembly writes to the same results directory, and a fixed filename makes the last
+> assembly overwrite the others. `LogFilePrefix` emits one uniquely-named `results_*.trx` per assembly,
+> and `build-verdict.ps1` aggregates them recursively.
 
 `verdict.json` (the agent's only required input):
 
