@@ -1,13 +1,19 @@
-Add run-log viewer and Paste-again button to the app shell
+Preserve full clipboard, exclude dictation from history, guard restore
 
-The history store (JsonHistoryStore) and DictationPipeline.PasteAgainAsync
-already existed but had no UI. This surfaces both:
+Port the macOS pasteboard-fidelity behavior into Win32ClipboardPasteService,
+replacing the text-only preserve/restore that could destroy a user's copied
+image or rich content:
 
-- New RunLogPage lists persisted runs newest-first (timestamp, intent, app,
-  status, cleaned + raw text) with Refresh and Clear (confirmation dialog).
-- MainPage gains a "Run log" button and a "Paste again" button that re-pastes
-  the last cleaned transcript; it enables once a completed run exists.
+- Snapshot every memory-based clipboard format (text, RTF, HTML, DIB, file
+  lists) and restore them all, so a paste never wipes non-text clipboard data.
+- Mark the dictated text transient via the CanIncludeInClipboardHistory,
+  CanUploadToCloudClipboard and ExcludeClipboardContentFromMonitorProcessing
+  formats so it stays out of Win+V history and the cloud clipboard (analog of
+  the macOS transient/concealed type marking).
+- Verify the clipboard sequence number before restoring: if the user copied
+  something new during the paste window, skip the restore instead of clobbering
+  it (analog of the macOS changeCount check).
 
-Inner loop GREEN at 186; app builds x86 clean.
+App builds x86 clean; Platform-only change (exercised at L4).
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

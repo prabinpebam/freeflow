@@ -8,20 +8,43 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace FreeFlow.Platform.Clipboard;
 
 /// <summary>
-/// Real paste adapter implementing the preserve → set → paste → restore flow.
-/// Captures the current clipboard Unicode text, places the dictated text,
-/// synthesizes Ctrl+V via <c>SendInput</c>, then restores the prior text. The
-/// restore runs in a <c>finally</c> so the user's clipboard is returned even if
-/// the paste keystroke fails.
+/// Real paste adapter implementing the macOS-parity preserve → set → paste →
+/// restore flow. Unlike the v1 text-only version, this:
 ///
-/// v1 preserves Unicode text only (see known-limitations.md); richer formats are
-/// a Phase 7 item. Exercised by the L4 UI tier; the inner loop uses the
-/// in-memory paste fake.
+/// <list type="bullet">
+/// <item>Snapshots <b>every</b> memory-based clipboard format (text, RTF, HTML,
+/// DIB images, file lists, …) so restoring never destroys whatever the user had
+/// copied — the macOS code preserves the full pasteboard, and a text-only restore
+/// would silently wipe an image or rich content.</item>
+/// <item>Marks the dictated text as transient so it does <b>not</b> land in
+/// Windows clipboard history (Win+V) or roam to the cloud clipboard — the analog
+/// of the macOS "transient"/"concealed" pasteboard type marking.</item>
+/// <item>Verifies the clipboard sequence number before restoring: if the user (or
+/// another app) changed the clipboard during the paste window we skip the restore
+/// rather than clobber their new content — the analog of the macOS changeCount
+/// check.</item>
+/// </list>
+///
+/// Exercised by the L4 UI tier; the inner loop uses the in-memory paste fake.
 /// </summary>
 public sealed class Win32ClipboardPasteService : IClipboardPasteService
 {
     private const uint CF_UNICODETEXT = 13;
     private const uint GMEM_MOVEABLE = 0x0002;
+
+    // Handle-based formats that are NOT global-memory blocks; GlobalLock on them is
+    // invalid, so they are skipped during snapshot/restore (rare for dictation use).
+    private static readonly HashSet<uint> NonMemoryFormats = new()
+    {
+        2,    // CF_BITMAP
+        3,    // CF_METAFILEPICT
+        9,    // CF_PALETTE
+        14,   // CF_ENHMETAFILE
+        0x80, // CF_OWNERDISPLAY
+        0x82, // CF_DSPBITMAP
+        0x83, // CF_DSPMETAFILEPICT
+        0x8E, // CF_DSPENHMETAFILE
+    };
 
     private const int INPUT_KEYBOARD = 1;
     private const uint KEYEVENTF_KEYUP = 0x0002;
@@ -48,6 +71,15 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
     private readonly ILogger<Win32ClipboardPasteService> _logger;
     private readonly TimeSpan _restoreDelay;
 
+    // Registered formats that ask the OS to keep this clipboard content out of
+    // clipboard history and the cloud clipboard. Resolved lazily once.
+    private static readonly uint ExcludeFromHistory =
+        RegisterClipboardFormat("CanIncludeInClipboardHistory");
+    private static readonly uint ExcludeFromCloud =
+        RegisterClipboardFormat("CanUploadToCloudClipboard");
+    private static readonly uint ExcludeFromMonitoring =
+        RegisterClipboardFormat("ExcludeClipboardContentFromMonitorProcessing");
+
     public Win32ClipboardPasteService(
         ILogger<Win32ClipboardPasteService>? logger = null,
         TimeSpan? restoreDelay = null)
@@ -66,7 +98,10 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
             return;
         }
 
-        var previous = TryGetClipboardText();
+        // Full-fidelity snapshot of the prior clipboard so the restore can put back
+        // whatever the user had — not just text.
+        var snapshot = CaptureClipboardSnapshot();
+        var pasteSucceeded = false;
         try
         {
             if (!TrySetClipboardText(text))
@@ -75,48 +110,98 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
                 return;
             }
 
+            // Remember the sequence number our own write produced so we can detect
+            // whether anything changed the clipboard during the paste window.
+            var oursSeq = GetClipboardSequenceNumber();
+
             SendCtrlV();
 
             // Give the target app time to consume the paste before we restore.
             await Task.Delay(_restoreDelay, ct).ConfigureAwait(false);
+
+            // Only restore if the clipboard still holds *our* content. If the
+            // sequence number moved, the user copied something new mid-window and
+            // restoring our snapshot would clobber it.
+            pasteSucceeded = GetClipboardSequenceNumber() == oursSeq;
         }
         finally
         {
-            if (previous is not null)
+            if (pasteSucceeded)
             {
-                TrySetClipboardText(previous);
+                RestoreClipboardSnapshot(snapshot);
             }
         }
     }
 
-    private string? TryGetClipboardText()
+    private List<ClipboardBlob> CaptureClipboardSnapshot()
     {
+        var blobs = new List<ClipboardBlob>();
         if (!OpenClipboardWithRetry())
         {
-            return null;
+            return blobs;
         }
 
         try
         {
-            var handle = GetClipboardData(CF_UNICODETEXT);
-            if (handle == IntPtr.Zero)
+            uint format = 0;
+            while ((format = EnumClipboardFormats(format)) != 0)
             {
-                return null;
-            }
+                if (NonMemoryFormats.Contains(format))
+                {
+                    continue;
+                }
 
-            var ptr = GlobalLock(handle);
-            if (ptr == IntPtr.Zero)
-            {
-                return null;
-            }
+                var handle = GetClipboardData(format);
+                if (handle == IntPtr.Zero)
+                {
+                    continue;
+                }
 
-            try
-            {
-                return Marshal.PtrToStringUni(ptr);
+                var size = (int)GlobalSize(handle);
+                if (size <= 0)
+                {
+                    continue;
+                }
+
+                var ptr = GlobalLock(handle);
+                if (ptr == IntPtr.Zero)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var bytes = new byte[size];
+                    Marshal.Copy(ptr, bytes, 0, size);
+                    blobs.Add(new ClipboardBlob(format, bytes));
+                }
+                finally
+                {
+                    GlobalUnlock(handle);
+                }
             }
-            finally
+        }
+        finally
+        {
+            CloseClipboard();
+        }
+
+        return blobs;
+    }
+
+    private void RestoreClipboardSnapshot(List<ClipboardBlob> snapshot)
+    {
+        if (!OpenClipboardWithRetry())
+        {
+            return;
+        }
+
+        try
+        {
+            EmptyClipboard();
+            foreach (var blob in snapshot)
             {
-                GlobalUnlock(handle);
+                PlaceBytes(blob.Format, blob.Data);
             }
         }
         finally
@@ -136,34 +221,17 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
         {
             EmptyClipboard();
 
-            var bytes = (text.Length + 1) * 2; // UTF-16 + null terminator
-            var hGlobal = GlobalAlloc(GMEM_MOVEABLE, (UIntPtr)bytes);
-            if (hGlobal == IntPtr.Zero)
+            var bytes = System.Text.Encoding.Unicode.GetBytes(text + '\0');
+            if (!PlaceBytes(CF_UNICODETEXT, bytes))
             {
                 return false;
             }
 
-            var target = GlobalLock(hGlobal);
-            if (target == IntPtr.Zero)
-            {
-                GlobalFree(hGlobal);
-                return false;
-            }
-
-            try
-            {
-                Marshal.Copy(System.Text.Encoding.Unicode.GetBytes(text + '\0'), 0, target, bytes);
-            }
-            finally
-            {
-                GlobalUnlock(hGlobal);
-            }
-
-            if (SetClipboardData(CF_UNICODETEXT, hGlobal) == IntPtr.Zero)
-            {
-                GlobalFree(hGlobal); // ownership not transferred on failure
-                return false;
-            }
+            // Ask Windows to keep the dictated text out of clipboard history and the
+            // cloud clipboard. A single zero DWORD is the documented marker payload.
+            MarkTransient(ExcludeFromHistory);
+            MarkTransient(ExcludeFromCloud);
+            MarkTransient(ExcludeFromMonitoring);
 
             return true;
         }
@@ -171,6 +239,51 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
         {
             CloseClipboard();
         }
+    }
+
+    private void MarkTransient(uint format)
+    {
+        if (format == 0)
+        {
+            return;
+        }
+
+        PlaceBytes(format, new byte[] { 0, 0, 0, 0 });
+    }
+
+    // Allocates a moveable global block, copies bytes in, and hands ownership to the
+    // clipboard. Caller must already hold the clipboard open.
+    private bool PlaceBytes(uint format, byte[] bytes)
+    {
+        var hGlobal = GlobalAlloc(GMEM_MOVEABLE, (UIntPtr)bytes.Length);
+        if (hGlobal == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var target = GlobalLock(hGlobal);
+        if (target == IntPtr.Zero)
+        {
+            GlobalFree(hGlobal);
+            return false;
+        }
+
+        try
+        {
+            Marshal.Copy(bytes, 0, target, bytes.Length);
+        }
+        finally
+        {
+            GlobalUnlock(hGlobal);
+        }
+
+        if (SetClipboardData(format, hGlobal) == IntPtr.Zero)
+        {
+            GlobalFree(hGlobal); // ownership not transferred on failure
+            return false;
+        }
+
+        return true;
     }
 
     private static bool OpenClipboardWithRetry()
@@ -264,6 +377,8 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
         _ => false,
     };
 
+    private readonly record struct ClipboardBlob(uint Format, byte[] Data);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct INPUT
     {
@@ -314,6 +429,15 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr SetClipboardData(uint uFormat, IntPtr hMem);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint EnumClipboardFormats(uint format);
+
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern uint RegisterClipboardFormat(string lpszFormat);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetClipboardSequenceNumber();
+
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr GlobalAlloc(uint uFlags, UIntPtr dwBytes);
 
@@ -324,7 +448,9 @@ public sealed class Win32ClipboardPasteService : IClipboardPasteService
     private static extern IntPtr GlobalLock(IntPtr hMem);
 
     [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern UIntPtr GlobalSize(IntPtr hMem);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GlobalUnlock(IntPtr hMem);
 }
-
