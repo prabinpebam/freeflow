@@ -9,12 +9,15 @@ namespace FreeFlow.Platform.Audio;
 /// <summary>
 /// Real microphone capture adapter built on NAudio's <see cref="WaveInEvent"/>.
 /// Records mono 16 kHz PCM16 — the format the transcription pipeline expects —
-/// and returns the buffered samples as an <see cref="AudioClip"/>. Device I/O is
-/// exercised by the L4/L5 tiers; the deterministic loop uses fixture audio.
+/// and returns the buffered samples as an <see cref="AudioClip"/>. The input
+/// device is resolved from the user's saved selection at the start of each
+/// recording (falling back to the OS default when unset or unplugged). Device
+/// I/O is exercised by the L4/L5 tiers; the deterministic loop uses fixture audio.
 /// </summary>
 public sealed class NAudioCaptureService : IAudioCaptureService, IDisposable
 {
     private readonly ILogger<NAudioCaptureService> _logger;
+    private readonly Func<string?>? _selectedDeviceId;
     private readonly int _sampleRate;
     private readonly int _channels;
 
@@ -24,10 +27,12 @@ public sealed class NAudioCaptureService : IAudioCaptureService, IDisposable
 
     public NAudioCaptureService(
         ILogger<NAudioCaptureService>? logger = null,
+        Func<string?>? selectedDeviceId = null,
         int sampleRate = 16000,
         int channels = 1)
     {
         _logger = logger ?? NullLogger<NAudioCaptureService>.Instance;
+        _selectedDeviceId = selectedDeviceId;
         _sampleRate = sampleRate;
         _channels = channels;
     }
@@ -38,8 +43,11 @@ public sealed class NAudioCaptureService : IAudioCaptureService, IDisposable
 
         _buffer = new MemoryStream();
         _stopped = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var deviceNumber = ResolveDeviceNumber();
         _waveIn = new WaveInEvent
         {
+            DeviceNumber = deviceNumber,
             WaveFormat = new WaveFormat(_sampleRate, 16, _channels),
             BufferMilliseconds = 50,
         };
@@ -47,9 +55,22 @@ public sealed class NAudioCaptureService : IAudioCaptureService, IDisposable
         _waveIn.DataAvailable += OnDataAvailable;
         _waveIn.RecordingStopped += OnRecordingStopped;
 
-        _logger.LogDebug("Starting capture at {Rate} Hz, {Channels} channel(s).", _sampleRate, _channels);
+        _logger.LogDebug(
+            "Starting capture at {Rate} Hz, {Channels} channel(s) on device {Device}.",
+            _sampleRate, _channels, deviceNumber);
         _waveIn.StartRecording();
         return Task.CompletedTask;
+    }
+
+    private int ResolveDeviceNumber()
+    {
+        var selectedId = _selectedDeviceId?.Invoke();
+        if (string.IsNullOrWhiteSpace(selectedId))
+        {
+            return AudioDeviceSelector.SystemDefaultIndex;
+        }
+
+        return AudioDeviceSelector.ResolveIndex(NAudioDeviceProvider.EnumerateDeviceIds(), selectedId);
     }
 
     public async Task<AudioClip> StopAndGetClipAsync(CancellationToken ct = default)

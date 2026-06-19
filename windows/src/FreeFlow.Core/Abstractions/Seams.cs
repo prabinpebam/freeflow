@@ -11,6 +11,16 @@ public interface IAudioCaptureService
     Task<AudioClip> StopAndGetClipAsync(CancellationToken ct = default);
 }
 
+/// <summary>
+/// Enumerates the available microphone (audio input) devices so the settings UI
+/// can offer a selection. Backed by the platform audio stack; not used in the
+/// deterministic inner loop.
+/// </summary>
+public interface IAudioDeviceProvider
+{
+    IReadOnlyList<AudioInputDevice> GetInputDevices();
+}
+
 /// <summary>Speech-to-text seam. Faked with cassettes in the inner loop.</summary>
 public interface ITranscriptionClient
 {

@@ -10,6 +10,14 @@ public sealed record GeneralSettings
     /// <summary>Start FreeFlow automatically when the user signs in.</summary>
     public bool LaunchAtLogin { get; init; }
 
+    /// <summary>
+    /// Persisted microphone selection. Stores the device id from
+    /// <see cref="FreeFlow.Core.Audio.AudioInputDevice"/>; empty means the OS
+    /// default capture device. Resolved to a live device at capture time, so an
+    /// unplugged device transparently falls back to the default.
+    /// </summary>
+    public string InputDeviceId { get; init; } = string.Empty;
+
     /// <summary>Play start/stop cues while recording.</summary>
     public bool PlaySounds { get; init; } = true;
 

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using FreeFlow.Core.Abstractions;
+using FreeFlow.Core.Audio;
 using FreeFlow.Core.Input;
 using FreeFlow.Core.Providers;
 using FreeFlow.Core.Settings;
@@ -34,7 +36,36 @@ public sealed partial class SettingsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        LoadIntoUi(_store.Load());
+        var settings = _store.Load();
+        PopulateMicrophones(settings.General.InputDeviceId);
+        LoadIntoUi(settings);
+    }
+
+    private void PopulateMicrophones(string selectedId)
+    {
+        var provider = App.Services.GetService<IAudioDeviceProvider>();
+        var devices = provider?.GetInputDevices()
+            ?? new List<AudioInputDevice> { AudioInputDevice.SystemDefault };
+
+        // Guarantee a "System default" entry, and surface a previously-saved
+        // device that is no longer present so the user can see/keep their choice.
+        var items = devices.ToList();
+        if (!items.Any(d => d.IsSystemDefault))
+        {
+            items.Insert(0, AudioInputDevice.SystemDefault);
+        }
+
+        if (!string.IsNullOrEmpty(selectedId) && items.All(d => d.Id != selectedId))
+        {
+            items.Add(new AudioInputDevice(selectedId, $"{selectedId} (not connected)"));
+        }
+
+        MicDevice.ItemsSource = items;
+        MicDevice.SelectedValue = selectedId ?? string.Empty;
+        if (MicDevice.SelectedItem is null)
+        {
+            MicDevice.SelectedIndex = 0;
+        }
     }
 
     private void LoadIntoUi(AppSettings settings)
@@ -87,6 +118,7 @@ public sealed partial class SettingsPage : Page
             General = current.General with
             {
                 LaunchAtLogin = LaunchAtLogin.IsOn,
+                InputDeviceId = (MicDevice.SelectedValue as string) ?? string.Empty,
                 HistoryCap = double.IsNaN(HistoryCap.Value) ? current.General.HistoryCap : (int)HistoryCap.Value,
             },
         };

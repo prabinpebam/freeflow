@@ -61,6 +61,12 @@
 
                 <StackPanel Spacing="8">
                     <TextBlock Text="General" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <ComboBox
+                        x:Name="MicDevice"
+                        Header="Microphone"
+                        HorizontalAlignment="Stretch"
+                        DisplayMemberPath="Name"
+                        SelectedValuePath="Id" />
                     <ToggleSwitch x:Name="LaunchAtLogin" Header="Launch at login" OnContent="On" OffContent="Off" />
                     <NumberBox x:Name="HistoryCap" Header="History entries kept" Minimum="1" Maximum="10000" SpinButtonPlacementMode="Inline" />
                 </StackPanel>
