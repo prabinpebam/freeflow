@@ -116,6 +116,7 @@ If you want to build a Windows-native version of FreeFlow, see the detailed impl
 - [`docs/windows/porting-plan.md`](docs/windows/porting-plan.md)
 - Supporting planning artifacts:
   - [`docs/windows/dev-environment.md`](docs/windows/dev-environment.md)
+  - [`docs/windows/testing-strategy.md`](docs/windows/testing-strategy.md)
   - [`docs/windows/decisions.md`](docs/windows/decisions.md)
   - [`docs/windows/parity-matrix.md`](docs/windows/parity-matrix.md)
   - [`docs/windows/test-matrix.md`](docs/windows/test-matrix.md)

@@ -29,6 +29,7 @@ Use this file to capture architecture and product decisions that affect implemen
 | ADR-005 | Context/screenshot defaults | Before setup UX finalization | Proposed | |
 | ADR-006 | Command mode v1 scope | Before v1 freeze | Proposed | |
 | ADR-007 | Tray-icon component (no built-in WinUI 3 tray API) | Before Phase 1 | Proposed | e.g., H.NotifyIcon vs custom |
+| ADR-008 | AI-eval thresholds + golden-corpus ownership | Before Phase 3 | Proposed | Who tunes scores; how corpus is curated/grown |
 
 ## Decision history
 

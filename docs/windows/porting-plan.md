@@ -433,6 +433,23 @@ Stretch validation:
 
 ## 10. Testing strategy
 
+> The full, stack-specific strategy — oracle model (how we define "right"), the
+> deterministic test tiers, the golden-corpus reuse of the macOS test-case exporter, the
+> AI-output evaluation harness, and the **automated agentic run/evaluate/fix loop** — lives
+> in [`testing-strategy.md`](testing-strategy.md). The summary below is the index.
+
+Key ideas:
+
+- **Define "right" first.** Each behavior gets an executable spec and an explicit oracle
+  class: deterministic (exact), invariant (property), or judgmental (rubric/semantic).
+- **Deterministic inner loop (tiers L0–L3).** All non-determinism (audio, providers, clock,
+  hotkeys, clipboard) is replaced by seams/fixtures so verdicts are reproducible.
+- **Golden corpus.** Reuse the macOS `TestCaseExporter` ZIP format as the cross-platform
+  source of truth for pipeline inputs and expected outputs.
+- **Agentic loop.** A single command emits a machine-readable `verdict.json`; the agent
+  fixes product code against failing specs and re-runs until green, with guardrails that
+  forbid weakening the specs/oracles.
+
 ## 10.1 Unit tests (required)
 
 - State transitions and cancellation behavior
@@ -473,6 +490,7 @@ Every release candidate must pass:
 2. Manual smoke matrix on defined OS/apps/devices
 3. No open P0/P1 bugs
 4. Crash-free long-run session test
+5. AI-output evaluation within tolerance vs the previous release (see testing-strategy.md)
 
 ## 11. CI/CD and release engineering
 
@@ -541,6 +559,7 @@ Deliverables:
 - This plan finalized
 - Behavior parity matrix with explicit pass/fail specs
 - Decision log entries for all unresolved architecture choices
+- Oracle class assigned to each v1 parity row (see testing-strategy.md Section 2)
 
 Exit criteria:
 
@@ -555,11 +574,14 @@ Tasks:
 - Implement DI and logging infrastructure
 - Implement interface contracts and no-op adapters
 - Add initial unit tests for state machine
+- Stand up the test foundation: `FreeFlow.TestKit` (corpus loader, fakes, cassette handler),
+  the determinism guard, and `build-verdict.ps1` so the agentic loop exists before features grow
 
 Exit criteria:
 
 - App launches with mock services
 - CI passes on Windows
+- Deterministic tiers (L0–L3) run and emit `verdict.json`
 
 ## Phase 3: Vertical slice MVP core (Weeks 3-4)
 
@@ -689,6 +711,7 @@ Maintain these docs under `docs/windows/`:
 
 - `porting-plan.md` (this file)
 - `dev-environment.md` (workstation setup + verification)
+- `testing-strategy.md` (oracle model, test tiers, eval harness, agentic loop)
 - `decisions.md` (architecture decision log)
 - `parity-matrix.md` (feature-by-feature status)
 - `test-matrix.md` (OS/app/device matrix and results)
@@ -698,6 +721,8 @@ Maintain these docs under `docs/windows/`:
 Supporting scripts under `scripts/windows/`:
 
 - `check-dev-env.ps1` (development environment verification)
+- `build-verdict.ps1` (projects test results into machine-readable `verdict.json`)
+- `run-agentic-loop.ps1` (run -> evaluate -> fix loop driver)
 
 ## 17. Immediate next actions
 
