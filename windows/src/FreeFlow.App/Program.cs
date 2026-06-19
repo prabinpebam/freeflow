@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -21,25 +22,54 @@ public static class Program
     [STAThread]
     private static void Main(string[] args)
     {
-        // Handle Velopack lifecycle events (install, update, uninstall, first-run)
-        // and exit early when invoked for one of those hooks.
-        VelopackApp.Build().Run();
-
-        // Single-instance guard: if another FreeFlow is already running, exit.
-        _singleInstanceMutex = new Mutex(initiallyOwned: true, "FreeFlow.SingleInstance", out var isNew);
-        if (!isNew)
+        try
         {
-            return;
+            // Handle Velopack lifecycle events (install, update, uninstall, first-run)
+            // and exit early when invoked for one of those hooks.
+            VelopackApp.Build().Run();
+
+            // Single-instance guard: if another FreeFlow is already running, exit.
+            _singleInstanceMutex = new Mutex(initiallyOwned: true, "FreeFlow.SingleInstance", out var isNew);
+            if (!isNew)
+            {
+                return;
+            }
+
+            Microsoft.UI.Xaml.Application.Start(p =>
+            {
+                var context = new DispatcherQueueSynchronizationContext(
+                    DispatcherQueue.GetForCurrentThread());
+                SynchronizationContext.SetSynchronizationContext(context);
+                _ = new App();
+            });
+
+            GC.KeepAlive(_singleInstanceMutex);
         }
-
-        Microsoft.UI.Xaml.Application.Start(p =>
+        catch (Exception ex)
         {
-            var context = new DispatcherQueueSynchronizationContext(
-                DispatcherQueue.GetForCurrentThread());
-            SynchronizationContext.SetSynchronizationContext(context);
-            _ = new App();
-        });
+            // A WinUI bootstrap or DI failure otherwise exits the process with no
+            // visible error. Persist the crash so it can be diagnosed post-mortem.
+            WriteCrashLog(ex);
+            throw;
+        }
+    }
 
-        GC.KeepAlive(_singleInstanceMutex);
+    private static void WriteCrashLog(Exception ex)
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "FreeFlow");
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, "crash.log");
+            File.AppendAllText(
+                path,
+                $"[{DateTime.UtcNow:o}] FATAL startup exception{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Never let crash logging mask the original failure.
+        }
     }
 }

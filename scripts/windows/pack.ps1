@@ -116,6 +116,8 @@ foreach ($rid in $Runtimes) {
     $relDir = Join-Path $OutputDir $rid
     New-Item -ItemType Directory -Force -Path $relDir | Out-Null
 
+    $iconPath = Join-Path $repoRoot 'windows' 'src' 'FreeFlow.App' 'Assets' 'AppIcon.ico'
+
     $vpkArgs = @(
         'pack',
         '--packId', $packId,
@@ -126,6 +128,9 @@ foreach ($rid in $Runtimes) {
         '--outputDir', $relDir,
         '--channel', $Channel
     )
+    if (Test-Path $iconPath) {
+        $vpkArgs += @('--icon', $iconPath)
+    }
     if ($SignParams) {
         $vpkArgs += @('--signParams', $SignParams)
     }

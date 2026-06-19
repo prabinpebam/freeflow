@@ -4,9 +4,18 @@
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <WindowsPackageType>None</WindowsPackageType>
+    <!--
+      Unpackaged AND fully self-contained: bundle both the .NET runtime and the
+      Windows App SDK runtime into the app so it launches on any machine without
+      the Windows App Runtime being pre-installed. Without WindowsAppSDKSelfContained
+      the process silently exits at WinUI bootstrap when no matching runtime exists.
+    -->
+    <SelfContained>true</SelfContained>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <EnableWinAppRunSupport>false</EnableWinAppRunSupport>
     <RootNamespace>FreeFlow_App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <Platforms>x86;x64;ARM64</Platforms>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
     <PublishProfile Condition="Exists('Properties\PublishProfiles\win-$(Platform).pubxml')">win-$(Platform).pubxml</PublishProfile>
@@ -86,4 +95,27 @@
     -->
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
+
+  <!--
+    Unpackaged WinUI 3 publish ('dotnet publish' for win-x86/x64/arm64) drops the
+    app's own compiled XAML resources: the app PRI (FreeFlow.App.pri) and the
+    per-view *.xbf files. Without them Microsoft.UI.Xaml.Application.LoadComponent
+    throws XamlParseException at runtime and the process exits immediately (the
+    "appears in Task Manager then vanishes" symptom). The build step DOES produce
+    them in $(OutDir); copy them into the publish output, naming the app PRI
+    'resources.pri' so the unpackaged XAML loader finds it next to the exe.
+  -->
+  <Target Name="CopyWinUiResourcesToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <_FreeFlowXbf Include="$(OutDir)*.xbf" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_FreeFlowXbf)"
+          DestinationFolder="$(PublishDir)"
+          SkipUnchangedFiles="false"
+          Condition="'@(_FreeFlowXbf)' != ''" />
+    <Copy SourceFiles="$(OutDir)$(AssemblyName).pri"
+          DestinationFiles="$(PublishDir)resources.pri"
+          SkipUnchangedFiles="false"
+          Condition="Exists('$(OutDir)$(AssemblyName).pri')" />
+  </Target>
 </Project>

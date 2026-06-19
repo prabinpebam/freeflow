@@ -1,4 +1,5 @@
 using FreeFlow.Core.Input;
+using System;
 using FreeFlow.Core.Pipeline;
 using FreeFlow.Core.Settings;
 using FreeFlow.Infrastructure.Settings;
@@ -33,24 +34,50 @@ public partial class App : Application
 
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        // Start the global keyboard hook on the UI thread (it owns the message
-        // loop the WH_KEYBOARD_LL hook requires) and keep the coordinator alive
-        // so the configured shortcuts drive the real pipeline end-to-end.
-        _coordinator = Services.GetRequiredService<DictationCoordinator>();
-        _hotkeys = Services.GetRequiredService<IHotkeyService>();
-        _hotkeys.Start();
-
-        var main = new MainWindow();
-        _window = main;
-        _window.Closed += (_, _) => _hotkeys?.Stop();
-        _window.Activate();
-
-        // First-run experience: if no transcription credentials are configured,
-        // jump straight to Settings so the app is usable immediately.
-        var settings = Services.GetRequiredService<ISettingsStore>().Load();
-        if (!settings.Providers.Transcription.HasCredentials)
+        try
         {
-            main.NavigateToSettings();
+            // Start the global keyboard hook on the UI thread (it owns the message
+            // loop the WH_KEYBOARD_LL hook requires) and keep the coordinator alive
+            // so the configured shortcuts drive the real pipeline end-to-end.
+            _coordinator = Services.GetRequiredService<DictationCoordinator>();
+            _hotkeys = Services.GetRequiredService<IHotkeyService>();
+            _hotkeys.Start();
+
+            var main = new MainWindow();
+            _window = main;
+            _window.Closed += (_, _) => _hotkeys?.Stop();
+            _window.Activate();
+
+            // First-run experience: if no transcription credentials are configured,
+            // jump straight to Settings so the app is usable immediately.
+            var settings = Services.GetRequiredService<ISettingsStore>().Load();
+            if (!settings.Providers.Transcription.HasCredentials)
+            {
+                main.NavigateToSettings();
+            }
+        }
+        catch (Exception ex)
+        {
+            WriteCrashLog(ex);
+            throw;
+        }
+    }
+
+    private static void WriteCrashLog(Exception ex)
+    {
+        try
+        {
+            var dir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "FreeFlow");
+            System.IO.Directory.CreateDirectory(dir);
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(dir, "crash.log"),
+                $"[{DateTime.UtcNow:o}] FATAL OnLaunched exception{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Never let crash logging mask the original failure.
         }
     }
 

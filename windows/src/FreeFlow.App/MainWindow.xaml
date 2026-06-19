@@ -18,11 +18,13 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TitleBar x:Name="AppTitleBar" Title="FreeFlow.App">
-            <TitleBar.IconSource>
-                <ImageIconSource ImageSource="Assets/AppIcon.ico" />
-            </TitleBar.IconSource>
-        </TitleBar>
+        <Border x:Name="AppTitleBar" Height="40" Background="Transparent">
+            <TextBlock
+                Text="FreeFlow"
+                VerticalAlignment="Center"
+                Margin="16,0,0,0"
+                Style="{StaticResource CaptionTextBlockStyle}" />
+        </Border>
 
         <!--
             The Frame hosts pages for your application content. Add your UI to
