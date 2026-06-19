@@ -1,7 +1,12 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 using FreeFlow.Core.Input;
 using FreeFlow.Core.Providers;
 using FreeFlow.Core.Settings;
+using FreeFlow.Infrastructure.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -105,7 +110,81 @@ public sealed partial class SettingsPage : Page
         return !result.HasErrors;
     }
 
-    private void OnValidateClick(object sender, RoutedEventArgs e) => TryValidate(out _);
+    private void OnValidateClick(object sender, RoutedEventArgs e) => _ = ValidateLiveAsync();
+
+    /// <summary>
+    /// "Validate" runs the static checks first, then makes a real, low-cost API
+    /// call to each configured provider so the user knows their key/URL/model
+    /// actually work — not just that they look well-formed.
+    /// </summary>
+    private async Task ValidateLiveAsync()
+    {
+        var settings = BuildFromUi(_store.Load());
+        var staticResult = SettingsValidator.Validate(settings);
+
+        // Static errors (bad URL, missing model, unset shortcuts) would make the
+        // live call meaningless, so surface them and stop before hitting the API.
+        if (staticResult.HasErrors)
+        {
+            ShowValidation(InfoBarSeverity.Error, "Fix the following before testing the connection", staticResult);
+            return;
+        }
+
+        SetBusy(true);
+        ShowMessage(InfoBarSeverity.Informational, "Testing connection…", "Calling the provider API.");
+        try
+        {
+            var lines = new List<string>();
+            var allOk = true;
+
+            using (var http = new HttpClient { Timeout = ProbeTimeout(settings) })
+            {
+                var probe = new ProviderConnectivityProbe(http);
+
+                var transcription = await probe.CheckTranscriptionAsync(settings.Providers.Transcription);
+                allOk &= transcription.Success;
+                lines.Add(Bullet(transcription));
+
+                if (settings.Dictation.PostProcessingEnabled)
+                {
+                    var postProcessing = await probe.CheckPostProcessingAsync(settings.Providers.PostProcessing);
+                    allOk &= postProcessing.Success;
+                    lines.Add(Bullet(postProcessing));
+                }
+            }
+
+            // Carry any non-blocking static warnings into the result too.
+            foreach (var issue in staticResult.Issues)
+            {
+                lines.Add($"• [{issue.Severity}] {issue.Field}: {issue.Message}");
+            }
+
+            ShowMessage(
+                allOk ? InfoBarSeverity.Success : InfoBarSeverity.Error,
+                allOk ? "Connection successful" : "Connection failed",
+                string.Join(Environment.NewLine, lines));
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private static TimeSpan ProbeTimeout(AppSettings settings)
+    {
+        var timeout = settings.Providers.Transcription.Timeout;
+        return timeout < TimeSpan.FromSeconds(10) ? TimeSpan.FromSeconds(30) : timeout;
+    }
+
+    private static string Bullet(ProviderCheckResult result)
+        => $"• {(result.Success ? "✓" : "✗")} {result.Message}";
+
+    private void SetBusy(bool busy)
+    {
+        ValidateButton.IsEnabled = !busy;
+        SaveButton.IsEnabled = !busy;
+        BackButton.IsEnabled = !busy;
+    }
 
     private void OnSaveClick(object sender, RoutedEventArgs e)
     {
@@ -128,11 +207,17 @@ public sealed partial class SettingsPage : Page
 
     private void ShowValidation(InfoBarSeverity severity, string title, ValidationResult result)
     {
-        ValidationBar.Severity = severity;
-        ValidationBar.Title = title;
-        ValidationBar.Message = result.Issues.Count == 0
+        var message = result.Issues.Count == 0
             ? string.Empty
             : string.Join(Environment.NewLine, result.Issues.Select(i => $"• [{i.Severity}] {i.Field}: {i.Message}"));
+        ShowMessage(severity, title, message);
+    }
+
+    private void ShowMessage(InfoBarSeverity severity, string title, string message)
+    {
+        ValidationBar.Severity = severity;
+        ValidationBar.Title = title;
+        ValidationBar.Message = message;
         ValidationBar.IsOpen = true;
     }
 }
