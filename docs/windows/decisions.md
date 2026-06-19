@@ -28,6 +28,7 @@ Use this file to capture architecture and product decisions that affect implemen
 | ADR-004 | Telemetry and diagnostics policy | Before beta | Proposed | |
 | ADR-005 | Context/screenshot defaults | Before setup UX finalization | Proposed | |
 | ADR-006 | Command mode v1 scope | Before v1 freeze | Proposed | |
+| ADR-007 | Tray-icon component (no built-in WinUI 3 tray API) | Before Phase 1 | Proposed | e.g., H.NotifyIcon vs custom |
 
 ## Decision history
 

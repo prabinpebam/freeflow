@@ -63,7 +63,7 @@ The port is successful when all are true:
 
 ## 3. Pre-execution decisions (must close before implementation)
 
-These specs must be decided before Phase 1 starts:
+These specs must be decided before Phase 2 (solution bootstrap) starts:
 
 | Decision | Options | Owner | Due |
 |---|---|---|---|
@@ -508,7 +508,33 @@ Every release candidate must pass:
 
 ## 12. Detailed phased execution plan
 
-## Phase 0: Spec lock and parity inventory (Week 1)
+## Phase 0: Development environment setup (Week 0)
+
+Goal: every contributor can build, run, test, and package the WinUI 3 app reproducibly
+before any feature work starts. Full details in [`dev-environment.md`](dev-environment.md).
+
+Tasks:
+
+- Install required toolchain: .NET 8 SDK, Windows SDK (10.0.19041+), VS 2022 / Build Tools
+  with the **.NET desktop** workload and **Windows App SDK C# Templates**, Git, GitHub CLI,
+  PowerShell 7, VS Code.
+- Install the VS Code extension set (C# Dev Kit, C#, XML, EditorConfig, PowerShell, GitHub Actions).
+- Confirm packaging/signing tools resolve (`signtool.exe`, `makeappx.exe`).
+- Decide the tray-icon component and (un)packaged inner-loop approach (feeds ADR-001/ADR-007).
+- Run the verification script and record results.
+
+Deliverables:
+
+- `scripts/windows/check-dev-env.ps1` passing with **0 FAIL** on each dev machine.
+- A throwaway WinUI 3 app that builds, runs, and tests from the VS Code terminal.
+- Committed workspace config templates ready for the `windows/` solution (see dev-environment.md Section 4).
+
+Exit criteria:
+
+- Environment verification reports zero required failures on all dev machines and CI.
+- A signed/unsigned sample MSIX can be produced locally (validates packaging toolchain).
+
+## Phase 1: Spec lock and parity inventory (Week 1)
 
 Deliverables:
 
@@ -521,7 +547,7 @@ Exit criteria:
 - All pre-execution decisions resolved
 - Interfaces and state machine reviewed and approved
 
-## Phase 1: Solution bootstrap and contracts (Week 2)
+## Phase 2: Solution bootstrap and contracts (Week 2)
 
 Tasks:
 
@@ -535,7 +561,7 @@ Exit criteria:
 - App launches with mock services
 - CI passes on Windows
 
-## Phase 2: Vertical slice MVP core (Weeks 3-4)
+## Phase 3: Vertical slice MVP core (Weeks 3-4)
 
 Tasks:
 
@@ -550,7 +576,7 @@ Exit criteria:
 - End-to-end: hotkey -> record -> transcribe -> paste
 - History entries persisted
 
-## Phase 3: Setup/settings and operational UX (Weeks 5-6)
+## Phase 4: Setup/settings and operational UX (Weeks 5-6)
 
 Tasks:
 
@@ -563,7 +589,7 @@ Exit criteria:
 
 - New user can configure and complete first dictation without manual config edits
 
-## Phase 4: Context baseline and command mode (Weeks 7-8)
+## Phase 5: Context baseline and command mode (Weeks 7-8)
 
 Tasks:
 
@@ -576,7 +602,7 @@ Exit criteria:
 
 - Context/command mode works in validated app subset with explicit fallback behavior
 
-## Phase 5: Packaging, updates, and beta hardening (Weeks 9-10)
+## Phase 6: Packaging, updates, and beta hardening (Weeks 9-10)
 
 Tasks:
 
@@ -589,7 +615,7 @@ Exit criteria:
 - Public beta candidate
 - Known limitation list published
 
-## Phase 6: Advanced parity closure (Post-v1)
+## Phase 7: Advanced parity closure (Post-v1)
 
 Tasks:
 
@@ -611,12 +637,13 @@ Tasks:
 
 ## 13.2 Dependency-critical sequence
 
-1. Specs and decisions
-2. Contracts and state machine
-3. Vertical slice
-4. Setup/settings UX
-5. Context/command extensions
-6. Packaging and release
+1. Development environment setup
+2. Specs and decisions
+3. Contracts and state machine
+4. Vertical slice
+5. Setup/settings UX
+6. Context/command extensions
+7. Packaging and release
 
 ## 14. Risk register with triggers
 
@@ -661,15 +688,21 @@ A milestone is done only if:
 Maintain these docs under `docs/windows/`:
 
 - `porting-plan.md` (this file)
+- `dev-environment.md` (workstation setup + verification)
 - `decisions.md` (architecture decision log)
 - `parity-matrix.md` (feature-by-feature status)
 - `test-matrix.md` (OS/app/device matrix and results)
 - `known-limitations.md` (current gaps and workarounds)
 - `release-checklist.md` (shipping gate checklist)
 
+Supporting scripts under `scripts/windows/`:
+
+- `check-dev-env.ps1` (development environment verification)
+
 ## 17. Immediate next actions
 
-1. Create `docs/windows/decisions.md` and close all pre-execution decisions.
-2. Create `docs/windows/parity-matrix.md` with macOS behavior references and expected Windows behavior.
-3. Scaffold `windows/` solution and contract interfaces from Section 4.
-4. Implement and validate vertical slice before expanding UX surface area.
+1. Set up the development environment per [`dev-environment.md`](dev-environment.md) and confirm `scripts/windows/check-dev-env.ps1` reports zero failures on every dev machine.
+2. Create `docs/windows/decisions.md` and close all pre-execution decisions.
+3. Create `docs/windows/parity-matrix.md` with macOS behavior references and expected Windows behavior.
+4. Scaffold `windows/` solution and contract interfaces from Section 4.
+5. Implement and validate vertical slice before expanding UX surface area.

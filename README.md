@@ -115,11 +115,18 @@ If you want to build a Windows-native version of FreeFlow, see the detailed impl
 
 - [`docs/windows/porting-plan.md`](docs/windows/porting-plan.md)
 - Supporting planning artifacts:
+  - [`docs/windows/dev-environment.md`](docs/windows/dev-environment.md)
   - [`docs/windows/decisions.md`](docs/windows/decisions.md)
   - [`docs/windows/parity-matrix.md`](docs/windows/parity-matrix.md)
   - [`docs/windows/test-matrix.md`](docs/windows/test-matrix.md)
   - [`docs/windows/known-limitations.md`](docs/windows/known-limitations.md)
   - [`docs/windows/release-checklist.md`](docs/windows/release-checklist.md)
+
+Verify your workstation is ready with:
+
+```powershell
+pwsh -File scripts/windows/check-dev-env.ps1
+```
 
 ## License
 
