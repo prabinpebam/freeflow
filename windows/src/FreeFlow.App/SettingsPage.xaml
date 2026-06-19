@@ -43,6 +43,7 @@
                 <StackPanel Spacing="8">
                     <TextBlock Text="Post-processing (cleanup)" Style="{StaticResource SubtitleTextBlockStyle}" />
                     <ToggleSwitch x:Name="PostProcessingEnabled" Header="Enable cleanup" OnContent="On" OffContent="Off" />
+                    <TextBox x:Name="PostProcessingBaseUrl" Header="Base URL" />
                     <PasswordBox x:Name="PostProcessingApiKey" Header="API key" />
                     <TextBox x:Name="PostProcessingModel" Header="Model (Azure: deployment name)" />
                     <TextBox

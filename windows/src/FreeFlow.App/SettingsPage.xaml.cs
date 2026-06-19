@@ -45,6 +45,7 @@ public sealed partial class SettingsPage : Page
         TranscriptionApiVersion.Text = settings.Providers.Transcription.ApiVersion;
 
         PostProcessingEnabled.IsOn = settings.Dictation.PostProcessingEnabled;
+        PostProcessingBaseUrl.Text = settings.Providers.PostProcessing.BaseUrl;
         PostProcessingApiKey.Password = settings.Providers.PostProcessing.ApiKey;
         PostProcessingModel.Text = settings.Providers.PostProcessing.Model;
         PostProcessingApiVersion.Text = settings.Providers.PostProcessing.ApiVersion;
@@ -72,6 +73,7 @@ public sealed partial class SettingsPage : Page
                 },
                 PostProcessing = current.Providers.PostProcessing with
                 {
+                    BaseUrl = PostProcessingBaseUrl.Text.Trim(),
                     ApiKey = PostProcessingApiKey.Password,
                     Model = PostProcessingModel.Text.Trim(),
                     ApiVersion = PostProcessingApiVersion.Text.Trim(),
