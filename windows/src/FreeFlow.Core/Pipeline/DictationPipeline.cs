@@ -1,5 +1,6 @@
 using FreeFlow.Core.Abstractions;
 using FreeFlow.Core.Context;
+using FreeFlow.Core.History;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -20,6 +21,7 @@ public sealed class DictationPipeline
     private readonly IIdProvider _ids;
     private readonly TimeProvider _time;
     private readonly ILogger<DictationPipeline> _logger;
+    private readonly IHistoryStore? _history;
     private readonly DictationStateMachine _machine = new();
 
     private DictationRequest _request = new();
@@ -33,7 +35,8 @@ public sealed class DictationPipeline
         IClipboardPasteService paste,
         IIdProvider ids,
         TimeProvider? time = null,
-        ILogger<DictationPipeline>? logger = null)
+        ILogger<DictationPipeline>? logger = null,
+        IHistoryStore? history = null)
     {
         _audio = audio;
         _transcription = transcription;
@@ -43,6 +46,7 @@ public sealed class DictationPipeline
         _ids = ids;
         _time = time ?? TimeProvider.System;
         _logger = logger ?? NullLogger<DictationPipeline>.Instance;
+        _history = history;
         _machine.Transitioned += (from, to) =>
             _logger.LogDebug("Dictation state {From} -> {To}", from, to);
     }
@@ -131,6 +135,20 @@ public sealed class DictationPipeline
 
             _machine.TransitionTo(DictationState.Completed);
             _machine.TransitionTo(DictationState.Idle);
+
+            if (_history is not null)
+            {
+                try
+                {
+                    await _history.AddAsync(HistoryEntry.FromRun(run), ct).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // History persistence must never fail a completed dictation.
+                    _logger.LogWarning(ex, "Failed to persist history entry for run {RunId}.", run.Id);
+                }
+            }
+
             _logger.LogInformation(
                 "Dictation complete (run={RunId} status={Status} pasted={Pasted}).",
                 run.Id,

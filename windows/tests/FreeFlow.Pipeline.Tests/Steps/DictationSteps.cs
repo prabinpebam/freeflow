@@ -1,6 +1,7 @@
 using FluentAssertions;
 using FreeFlow.Core.Audio;
 using FreeFlow.Core.Context;
+using FreeFlow.Core.Input;
 using FreeFlow.Core.Pipeline;
 using FreeFlow.TestKit;
 using Microsoft.Extensions.Time.Testing;
@@ -19,6 +20,21 @@ public sealed class DictationSteps
     private CassetteTranscriptionClient _transcription = new(string.Empty);
     private ScriptedPostProcessingClient _postProcessing = new(string.Empty);
     private DictationPipeline _pipeline = null!;
+    private FakeHotkeyService? _hotkeys;
+    private DictationCoordinator? _coordinator;
+
+    private void EnsureCoordinator()
+    {
+        if (_coordinator is not null)
+        {
+            return;
+        }
+
+        _pipeline = new DictationPipeline(
+            _audio, _transcription, _postProcessing, _context, _clipboard, new SeededIdProvider(), _time);
+        _hotkeys = new FakeHotkeyService();
+        _coordinator = new DictationCoordinator(_hotkeys, _pipeline);
+    }
 
     [Given("the focused app is \"(.*)\"")]
     public void GivenTheFocusedAppIs(string app)
@@ -63,4 +79,32 @@ public sealed class DictationSteps
     [Then("the clipboard is restored to \"(.*)\"")]
     public void ThenTheClipboardIsRestoredTo(string text)
         => _clipboard.Clipboard.Should().Be(text);
+
+    [When("the hold-to-talk hotkey is pressed")]
+    public async Task WhenTheHoldToTalkHotkeyIsPressed()
+    {
+        EnsureCoordinator();
+        _hotkeys!.Raise(HotkeyTrigger.HoldStart);
+        await _coordinator!.Pending;
+    }
+
+    [When("the hold-to-talk hotkey is released")]
+    public async Task WhenTheHoldToTalkHotkeyIsReleased()
+    {
+        EnsureCoordinator();
+        _hotkeys!.Raise(HotkeyTrigger.HoldStop);
+        await _coordinator!.Pending;
+    }
+
+    [When("the paste-again hotkey is pressed")]
+    public async Task WhenThePasteAgainHotkeyIsPressed()
+    {
+        EnsureCoordinator();
+        _hotkeys!.Raise(HotkeyTrigger.PasteAgain);
+        await _coordinator!.Pending;
+    }
+
+    [Then("the text is pasted (.*) times")]
+    public void ThenTheTextIsPastedTimes(int count)
+        => _clipboard.PasteLog.Should().HaveCount(count);
 }

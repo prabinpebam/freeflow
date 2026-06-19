@@ -632,7 +632,18 @@ Exit criteria:
 - End-to-end: hotkey -> record -> transcribe -> paste
 - History entries persisted
 
-## Phase 4: Setup/settings and operational UX (Weeks 5-6)
+> Status (Phase 3 complete): Core seams added (`HotkeyCombination`, `IHotkeyService`,
+> `IHistoryStore`/`HistoryEntry`, `ProviderConfiguration`, `DictationCoordinator`); the
+> pipeline now persists each run via `IHistoryStore` (failure-safe). Infrastructure ships
+> pure, fully-tested logic — `WavEncoder` (PCM16->WAV), provider response parsers,
+> injectable `HttpTranscriptionClient`/`HttpPostProcessingClient`, and a corruption-resilient
+> `JsonHistoryStore`. Platform real adapters: `KeyboardHookHotkeyService` (WH_KEYBOARD_LL),
+> `NAudioCaptureService` (16 kHz mono PCM16), `Win32ClipboardPasteService`
+> (preserve/set/SendInput Ctrl+V/restore), `DpapiSecretProtector`, plus
+> `AddFreeFlowRealPlatform` DI. The demo app starts the real global hotkey on the UI thread
+> and drives the pipeline through `DictationCoordinator` (mock audio/transcription so it runs
+> without provider credentials), persisting history to `%LOCALAPPDATA%\FreeFlow\history.json`.
+> BDD scenarios cover hotkey-driven dictation and paste-again. Inner loop green at 71 tests.
 
 Tasks:
 

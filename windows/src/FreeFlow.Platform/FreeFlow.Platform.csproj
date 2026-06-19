@@ -10,10 +10,12 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.1" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FreeFlow.Core\FreeFlow.Core.csproj" />
+    <ProjectReference Include="..\FreeFlow.Infrastructure\FreeFlow.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

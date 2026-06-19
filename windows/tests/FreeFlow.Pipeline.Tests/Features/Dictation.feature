@@ -14,3 +14,22 @@ Feature: Hold-to-talk dictation
     Then the pipeline ends in state "Idle"
     And the pasted text is "Hello world."
     And the clipboard is restored to "PREVIOUS"
+
+  Scenario: Global hotkey drives an end-to-end dictation
+    Given the focused app is "Notepad"
+    And the microphone will capture fixture audio
+    And the transcription provider will return "um hello world"
+    And the post-processor will return "Hello world."
+    When the hold-to-talk hotkey is pressed
+    And the hold-to-talk hotkey is released
+    Then the pasted text is "Hello world."
+
+  Scenario: Paste-again hotkey repastes the last output
+    Given the focused app is "Notepad"
+    And the microphone will capture fixture audio
+    And the transcription provider will return "um hello world"
+    And the post-processor will return "Hello world."
+    When the hold-to-talk hotkey is pressed
+    And the hold-to-talk hotkey is released
+    And the paste-again hotkey is pressed
+    Then the text is pasted 2 times

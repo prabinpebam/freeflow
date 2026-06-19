@@ -158,3 +158,52 @@ public sealed class SeededIdProvider : IIdProvider
         return new Guid(bytes);
     }
 }
+
+/// <summary>In-memory history store for the inner loop (newest first, capped).</summary>
+public sealed class InMemoryHistoryStore : FreeFlow.Core.History.IHistoryStore
+{
+    private readonly int _cap;
+    private readonly List<FreeFlow.Core.History.HistoryEntry> _entries = new();
+
+    public InMemoryHistoryStore(int cap = 200) => _cap = cap < 1 ? 1 : cap;
+
+    public IReadOnlyList<FreeFlow.Core.History.HistoryEntry> Entries => _entries;
+
+    public Task AddAsync(FreeFlow.Core.History.HistoryEntry entry, CancellationToken ct = default)
+    {
+        _entries.Insert(0, entry);
+        if (_entries.Count > _cap)
+        {
+            _entries.RemoveRange(_cap, _entries.Count - _cap);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<FreeFlow.Core.History.HistoryEntry>> LoadAsync(CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<FreeFlow.Core.History.HistoryEntry>>(_entries.ToList());
+
+    public Task ClearAsync(CancellationToken ct = default)
+    {
+        _entries.Clear();
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>Scripted hotkey service: tests raise triggers directly.</summary>
+public sealed class FakeHotkeyService : FreeFlow.Core.Input.IHotkeyService
+{
+    public FreeFlow.Core.Input.HotkeyBindings? Bindings { get; private set; }
+    public bool Running { get; private set; }
+
+    public event Action<FreeFlow.Core.Input.HotkeyTrigger>? Triggered;
+
+    public void Configure(FreeFlow.Core.Input.HotkeyBindings bindings) => Bindings = bindings;
+
+    public void Start() => Running = true;
+
+    public void Stop() => Running = false;
+
+    /// <summary>Test hook to simulate a shortcut activation.</summary>
+    public void Raise(FreeFlow.Core.Input.HotkeyTrigger trigger) => Triggered?.Invoke(trigger);
+}
