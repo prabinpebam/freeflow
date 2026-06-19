@@ -6,3 +6,5 @@ build/
 
 # Windows port: test/build artifacts (see windows/.gitignore for project bin/obj)
 artifacts/
+# Local commit-message scratch file used by the agent
+commitmsg.tmp

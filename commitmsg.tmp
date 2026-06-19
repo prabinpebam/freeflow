@@ -1,8 +1,0 @@
-Bump version to 0.2.0 for the feature-parity release
-
-This build closes the macOS feature-parity gap (recording overlay, sounds,
-system tray, launch-at-login, press-enter, voice macros, run-log viewer,
-paste-again, robust clipboard paste, expanded settings, and a first-run
-onboarding wizard), so the version moves from 0.1.0 to 0.2.0.
-
-Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
