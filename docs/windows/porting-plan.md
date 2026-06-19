@@ -600,13 +600,18 @@ Exit criteria:
 
 > **Status (scaffolded).** The `windows/` solution now exists (`FreeFlow.Windows.sln`) with
 > `FreeFlow.Core` (state machine, pipeline orchestrator, seams, corpus loader), a minimal
-> `FreeFlow.Infrastructure` (OpenAI-compatible request factory), and `FreeFlow.TestKit`
-> (deterministic fakes). The inner loop is green: 24 tests across `FreeFlow.Core.Tests` (L0) and
-> `FreeFlow.Pipeline.Tests` (L2 contract, L3 orchestration + a Reqnroll BDD scenario).
-> `scripts/windows/build-verdict.ps1` emits the `verdict.json` contract and
-> `scripts/windows/run-agentic-loop.ps1` drives run→evaluate, exiting green/red.
-> Still open for this phase: DI/logging host, the determinism guard test, the WinUI app shell
-> ("launches with mock services"), and the Windows CI workflow.
+> `FreeFlow.Infrastructure` (OpenAI-compatible request factory), `FreeFlow.Platform`
+> (real foreground-window context + mock audio/transcription/post-processing/paste adapters and
+> the `AddFreeFlowMockPlatform` DI extension), and a `FreeFlow.App` unpackaged WinUI 3 shell
+> (`WindowsPackageType=None`, retargeted to 19041) whose composition root resolves the pipeline
+> from DI and runs a full mock dictation round-trip. `FreeFlow.TestKit` supplies deterministic
+> fakes. The inner loop is green: 24 tests across `FreeFlow.Core.Tests` (L0) and
+> `FreeFlow.Pipeline.Tests` (L2 contract, L3 orchestration + a Reqnroll BDD scenario), and the
+> app launches with a live window. `scripts/windows/build-verdict.ps1` emits the `verdict.json`
+> contract and `scripts/windows/run-agentic-loop.ps1` drives run→evaluate, exiting green/red.
+> Still open for this phase: structured logging, the determinism guard test, and the Windows CI
+> workflow. Real platform adapters (hotkey, WASAPI audio, HTTP clients, clipboard paste) land in
+> Phase 3.
 
 ## Phase 3: Vertical slice MVP core (Weeks 3-4)
 

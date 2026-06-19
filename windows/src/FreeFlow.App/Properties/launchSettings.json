@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "FreeFlow.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "FreeFlow.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
