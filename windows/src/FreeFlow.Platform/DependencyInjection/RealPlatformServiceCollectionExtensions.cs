@@ -118,9 +118,17 @@ public static class RealPlatformServiceCollectionExtensions
 
         services.AddSingleton<DictationPipeline>();
         // The coordinator builds each run's request from the user's dictation
-        // settings (custom vocabulary, system prompt, post-processing toggle).
+        // settings (custom vocabulary, system prompt, post-processing toggle). When
+        // manual Edit Mode is configured, the held state of its modifier is sampled
+        // at trigger time so the pipeline can resolve dictation vs. transform intent.
         services.AddSingleton<Func<DictationRequest>>(
-            _ => () => new DictationRequest { Settings = dictationSettings });
+            _ => () => new DictationRequest
+            {
+                Settings = dictationSettings,
+                ManualModifierHeld =
+                    dictationSettings.EditMode is { Enabled: true, Style: CommandModeStyle.Manual }
+                    && ModifierKeyState.IsHeld(dictationSettings.EditMode.ManualModifier),
+            });
         services.AddSingleton<DictationCoordinator>();
 
         return services;

@@ -83,6 +83,26 @@
                 </StackPanel>
 
                 <StackPanel Spacing="8">
+                    <TextBlock Text="Edit Mode" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <TextBlock
+                        Text="Dictate over selected text to transform it with a spoken instruction (e.g. &quot;make this shorter&quot;). Automatic acts whenever text is selected; Manual also requires an extra modifier key."
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextWrapping="Wrap" />
+                    <ToggleSwitch x:Name="EditModeEnabled" Header="Enable Edit Mode" OnContent="On" OffContent="Off" />
+                    <ComboBox x:Name="EditModeStyle" Header="Invocation" Width="220">
+                        <ComboBoxItem Content="Automatic" />
+                        <ComboBoxItem Content="Manual (hold extra modifier)" />
+                    </ComboBox>
+                    <ComboBox x:Name="EditModeModifier" Header="Manual modifier" Width="220">
+                        <ComboBoxItem Content="Ctrl" />
+                        <ComboBoxItem Content="Alt" />
+                        <ComboBoxItem Content="Shift" />
+                        <ComboBoxItem Content="Win" />
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
                     <TextBlock Text="Voice macros" Style="{StaticResource SubtitleTextBlockStyle}" />
                     <TextBlock
                         Text="Say the command phrase on its own and FreeFlow pastes the expansion verbatim, skipping cleanup."

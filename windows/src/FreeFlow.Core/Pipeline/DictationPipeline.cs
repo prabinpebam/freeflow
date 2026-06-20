@@ -28,6 +28,7 @@ public sealed class DictationPipeline
 
     private DictationRequest _request = new();
     private CaptureContext _capturedContext = CaptureContext.None;
+    private DictationIntent _resolvedIntent = DictationIntent.Dictation;
 
     public DictationPipeline(
         IAudioCaptureService audio,
@@ -75,15 +76,28 @@ public sealed class DictationPipeline
         _machine.TransitionTo(DictationState.Arming);
         _capturedContext = await _context.CaptureAsync(ct).ConfigureAwait(false);
 
+        // Edit Mode resolves the effective intent from the live selection and the
+        // held manual modifier; without it, the caller's explicit intent stands.
+        _resolvedIntent = _request.Intent;
+        var editMode = _request.Settings.EditMode;
+        if (editMode is { Enabled: true })
+        {
+            await EnsureSelectionCapturedAsync(ct).ConfigureAwait(false);
+            _resolvedIntent = EditModeIntentResolver.Resolve(
+                editMode, _capturedContext.HasSelection, _request.ManualModifierHeld);
+            _logger.LogDebug(
+                "Edit Mode resolved intent={Intent} (style={Style} hasSelection={HasSelection} modifierHeld={ModifierHeld}).",
+                _resolvedIntent,
+                editMode.Style,
+                _capturedContext.HasSelection,
+                _request.ManualModifierHeld);
+        }
+
         // Command/edit mode operates on the current selection; capture it now (the
         // foreground app may lose focus or selection once recording starts).
-        if (IsCommand(_request.Intent) && _selection is not null && !_capturedContext.HasSelection)
+        if (IsCommand(_resolvedIntent))
         {
-            var selected = await _selection.TryReadSelectionAsync(ct).ConfigureAwait(false);
-            if (!string.IsNullOrEmpty(selected))
-            {
-                _capturedContext = _capturedContext with { SelectedText = selected };
-            }
+            await EnsureSelectionCapturedAsync(ct).ConfigureAwait(false);
         }
 
         _logger.LogDebug(
@@ -93,6 +107,21 @@ public sealed class DictationPipeline
             _capturedContext.HasSelection);
         await _audio.StartAsync(ct).ConfigureAwait(false);
         _machine.TransitionTo(DictationState.Recording);
+    }
+
+    /// <summary>Read the foreground selection into the captured context if absent.</summary>
+    private async Task EnsureSelectionCapturedAsync(CancellationToken ct)
+    {
+        if (_selection is null || _capturedContext.HasSelection)
+        {
+            return;
+        }
+
+        var selected = await _selection.TryReadSelectionAsync(ct).ConfigureAwait(false);
+        if (!string.IsNullOrEmpty(selected))
+        {
+            _capturedContext = _capturedContext with { SelectedText = selected };
+        }
     }
 
     /// <summary>Hold released: stop, transcribe, clean up, paste, record the run.</summary>
@@ -117,7 +146,7 @@ public sealed class DictationPipeline
                 processed = string.Empty;
                 status = "empty";
             }
-            else if (!IsCommand(_request.Intent)
+            else if (!IsCommand(_resolvedIntent)
                 && Macros.VoiceMacroMatcher.Match(raw, _request.Settings.VoiceMacros) is { } macro)
             {
                 // A voice macro matched the whole transcript: paste its payload
@@ -126,10 +155,10 @@ public sealed class DictationPipeline
                 status = "macro";
                 _logger.LogInformation("Voice macro triggered: {Command}", macro.Command);
             }
-            else if (_request.Settings.PostProcessingEnabled || IsCommand(_request.Intent))
+            else if (_request.Settings.PostProcessingEnabled || IsCommand(_resolvedIntent))
             {
                 processed = await _postProcessing
-                    .CleanupAsync(new PostProcessingRequest(raw, _request.Settings, _capturedContext, _request.Intent), ct)
+                    .CleanupAsync(new PostProcessingRequest(raw, _request.Settings, _capturedContext, _resolvedIntent), ct)
                     .ConfigureAwait(false) ?? string.Empty;
                 status = "ok";
             }
@@ -165,7 +194,7 @@ public sealed class DictationPipeline
             {
                 Id = _ids.NewId(),
                 Timestamp = _time.GetUtcNow(),
-                Intent = _request.Intent,
+                Intent = _resolvedIntent,
                 RawTranscript = raw,
                 PostProcessedTranscript = processed,
                 ContextSummary = string.Empty,

@@ -26,4 +26,11 @@ public sealed record DictationSettings
     /// cleanup is bypassed (parity with the macOS voice macros).
     /// </summary>
     public IReadOnlyList<Macros.VoiceMacro> VoiceMacros { get; init; } = System.Array.Empty<Macros.VoiceMacro>();
+
+    /// <summary>
+    /// Edit Mode (command mode) preferences. When enabled, dictating over selected
+    /// text transforms the selection instead of inserting new text (parity with the
+    /// macOS command mode).
+    /// </summary>
+    public EditModeSettings EditMode { get; init; } = new();
 }

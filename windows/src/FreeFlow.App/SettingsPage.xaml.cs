@@ -92,6 +92,17 @@ public sealed partial class SettingsPage : Page
         SystemPrompt.Text = settings.Dictation.SystemPrompt;
         ContextSystemPrompt.Text = settings.Dictation.ContextSystemPrompt;
 
+        EditModeEnabled.IsOn = settings.Dictation.EditMode.Enabled;
+        EditModeStyle.SelectedIndex = settings.Dictation.EditMode.Style == CommandModeStyle.Manual ? 1 : 0;
+        EditModeModifier.SelectedIndex = settings.Dictation.EditMode.ManualModifier switch
+        {
+            CommandModeModifier.Control => 0,
+            CommandModeModifier.Alt => 1,
+            CommandModeModifier.Shift => 2,
+            CommandModeModifier.Windows => 3,
+            _ => 1,
+        };
+
         _macros.Clear();
         foreach (var macro in settings.Dictation.VoiceMacros)
         {
@@ -141,6 +152,18 @@ public sealed partial class SettingsPage : Page
                     .Where(m => !string.IsNullOrWhiteSpace(m.Command) && !string.IsNullOrWhiteSpace(m.Payload))
                     .Select(m => new VoiceMacro { Command = m.Command.Trim(), Payload = m.Payload })
                     .ToArray(),
+                EditMode = current.Dictation.EditMode with
+                {
+                    Enabled = EditModeEnabled.IsOn,
+                    Style = EditModeStyle.SelectedIndex == 1 ? CommandModeStyle.Manual : CommandModeStyle.Automatic,
+                    ManualModifier = EditModeModifier.SelectedIndex switch
+                    {
+                        0 => CommandModeModifier.Control,
+                        2 => CommandModeModifier.Shift,
+                        3 => CommandModeModifier.Windows,
+                        _ => CommandModeModifier.Alt,
+                    },
+                },
             },
             Hotkeys = new HotkeyBindings(
                 ParseOrUnset(HoldToTalk.Text),

@@ -60,6 +60,13 @@ public sealed record DictationRequest
 {
     public DictationIntent Intent { get; init; } = DictationIntent.Dictation;
     public DictationSettings Settings { get; init; } = new();
+
+    /// <summary>
+    /// Whether the Edit Mode manual modifier was held when this run was triggered.
+    /// Captured at trigger time and used (with the live selection) to resolve the
+    /// effective intent when <see cref="Settings"/> enables manual Edit Mode.
+    /// </summary>
+    public bool ManualModifierHeld { get; init; }
 }
 
 public sealed record TranscriptionOptions(string CustomVocabulary);

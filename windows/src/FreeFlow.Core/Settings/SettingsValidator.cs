@@ -66,6 +66,7 @@ public static class SettingsValidator
         }
 
         ValidateHotkeys(issues, settings.Hotkeys);
+        ValidateEditMode(issues, settings.Dictation.EditMode, settings.Hotkeys);
 
         return issues.Count == 0 ? ValidationResult.Ok : new ValidationResult(issues);
     }
@@ -134,6 +135,39 @@ public static class SettingsValidator
                 "Hotkeys",
                 ValidationSeverity.Error,
                 conflict));
+        }
+    }
+
+    /// <summary>
+    /// When manual Edit Mode is enabled, its extra modifier must stay distinct from
+    /// the dictation shortcuts — otherwise pressing a shortcut would always look
+    /// like an Edit Mode request (parity with the macOS collision checks).
+    /// </summary>
+    private static void ValidateEditMode(
+        List<ValidationIssue> issues, EditModeSettings editMode, HotkeyBindings hotkeys)
+    {
+        if (!editMode.Enabled || editMode.Style != CommandModeStyle.Manual)
+        {
+            return;
+        }
+
+        var modifier = editMode.ManualModifier;
+        var named = new (string Name, HotkeyCombination Combo)[]
+        {
+            ("hold-to-talk", hotkeys.HoldToTalk),
+            ("toggle", hotkeys.Toggle),
+            ("paste-again", hotkeys.PasteAgain),
+        };
+
+        foreach (var (n, combo) in named)
+        {
+            if (modifier.Collides(combo))
+            {
+                issues.Add(new ValidationIssue(
+                    "Dictation.EditMode.ManualModifier",
+                    ValidationSeverity.Error,
+                    $"The Edit Mode modifier ({modifier.Title()}) is already part of the {n} shortcut."));
+            }
         }
     }
 
